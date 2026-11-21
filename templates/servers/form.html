@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Add server · {{ app_name }}{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>Add a server</h1>
+    <p class="muted">Waggle will SSH in, install Docker, and join the swarm.</p>
+  </div>
+</header>
+
+{% if not has_keys %}
+  <div class="alert alert-warning">
+    You need an SSH key before adding a server.
+    <a class="link" href="{% url 'servers:key_add' %}">Add one now</a>.
+  </div>
+{% endif %}
+
+<section class="card">
+  <form method="post" class="stack">
+    {% csrf_token %}
+    {% for error in form.non_field_errors %}
+      <div class="alert alert-error">{{ error }}</div>
+    {% endfor %}
+
+    <div class="grid-2">
+      {% for field in form %}
+        <div class="field {% if field.name == 'labels' %}span-2{% endif %}">
+          <label for="{{ field.id_for_label }}">
+            {{ field.label }}{% if field.field.required %}<span class="req">*</span>{% endif %}
+          </label>
+          {{ field }}
+          {% if field.help_text %}<p class="hint">{{ field.help_text }}</p>{% endif %}
+          {% for error in field.errors %}<p class="error">{{ error }}</p>{% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">Add and bootstrap</button>
+      <a class="btn btn-ghost" href="{% url 'servers:list' %}">Cancel</a>
+    </div>
+  </form>
+</section>
+
+<section class="card subtle">
+  <h2>What happens next</h2>
+  <ol class="steps-plain">
+    <li>Connect over SSH and pin the host key.</li>
+    <li>Check architecture, memory, disk, cgroups and clock sync.</li>
+    <li>Install Docker Engine and write a hardened <code>daemon.json</code>.</li>
+    <li>Open the swarm ports (2377/tcp, 7946/tcp+udp, 4789/udp).</li>
+    <li>Join the cluster using a freshly fetched join token.</li>
+    <li>Apply node labels and mark the node ready.</li>
+  </ol>
+  <p class="hint">The SSH user needs passwordless sudo. Waggle never stores passwords.</p>
+</section>
+{% endblock %}

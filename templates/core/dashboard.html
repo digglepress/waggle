@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard · {{ app_name }}{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="muted">Cluster health at a glance.</p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'servers:add' %}">Add server</a>
+</header>
+
+{% if not cluster.ok %}
+  <div class="alert alert-error">
+    <strong>Cluster unavailable.</strong> {{ cluster.message }}
+  </div>
+{% endif %}
+
+<div class="stats">
+  <div class="stat">
+    <span class="stat-label">Servers ready</span>
+    <span class="stat-value">{{ server_ready }}<small>/{{ server_total }}</small></span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Swarm nodes</span>
+    <span class="stat-value">{{ cluster.nodes|length }}</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Managers</span>
+    <span class="stat-value">{{ cluster.managers|length }}</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Needs attention</span>
+    <span class="stat-value {% if server_attention %}text-bad{% endif %}">{{ server_attention }}</span>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Servers</h2>
+    <a class="link" href="{% url 'servers:list' %}">View all</a>
+  </div>
+  {% if servers %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th><th>Role</th><th>Status</th><th>Address</th><th>Resources</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for server in servers %}
+          <tr>
+            <td>
+              <a href="{{ server.get_absolute_url }}">{{ server.name }}</a>
+              {% if server.is_local %}<span class="tag">control plane</span>{% endif %}
+            </td>
+            <td class="muted">{{ server.get_role_display }}</td>
+            <td><span class="badge badge-{{ server.status_tone }}">{{ server.get_status_display }}</span></td>
+            <td class="mono muted">{{ server.address }}</td>
+            <td class="muted">
+              {% if server.cpu_cores %}{{ server.cpu_cores }} vCPU · {% endif %}{{ server.ram_display }}
+            </td>
+            <td class="right"><a class="link" href="{{ server.get_absolute_url }}">Open</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">
+      <p>No servers yet.</p>
+      <p class="muted">Run <code>deploy/install.sh</code> on the control-plane host, then add worker nodes.</p>
+    </div>
+  {% endif %}
+</section>
+
+{% if cluster.ok %}
+<section class="card">
+  <div class="card-head">
+    <h2>Swarm</h2>
+    <a class="link" href="{% url 'core:cluster' %}">Cluster details</a>
+  </div>
+  <dl class="meta">
+    <div><dt>Cluster ID</dt><dd class="mono">{{ cluster.swarm.cluster_id|default:"—" }}</dd></div>
+    <div><dt>This node</dt><dd class="mono">{{ cluster.swarm.hostname|default:"—" }}</dd></div>
+    <div><dt>Manager</dt><dd>{{ cluster.swarm.control_available|yesno:"yes,no" }}</dd></div>
+    <div><dt>State</dt><dd>{{ cluster.swarm.local_state }}</dd></div>
+  </dl>
+</section>
+{% endif %}
+{% endblock %}

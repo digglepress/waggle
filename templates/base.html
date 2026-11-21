@@ -1,0 +1,59 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐝</text></svg>">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="{% url 'core:dashboard' %}">
+      <span class="brand-mark">🐝</span>
+      <span>
+        <strong>{{ app_name }}</strong>
+        <small>{{ app_tagline }}</small>
+      </span>
+    </a>
+
+    <nav class="nav">
+      <a class="nav-item {% if request.resolver_match.app_name == 'core' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+         href="{% url 'core:dashboard' %}">Dashboard</a>
+      <a class="nav-item {% if request.resolver_match.app_name == 'servers' and request.resolver_match.url_name == 'list' %}active{% endif %}"
+         href="{% url 'servers:list' %}">Servers</a>
+      <a class="nav-item {% if request.resolver_match.url_name == 'cluster' %}active{% endif %}"
+         href="{% url 'core:cluster' %}">Cluster</a>
+      <a class="nav-item {% if request.resolver_match.url_name == 'keys' or request.resolver_match.url_name == 'key_add' %}active{% endif %}"
+         href="{% url 'servers:keys' %}">SSH keys</a>
+    </nav>
+
+    <div class="sidebar-foot">
+      {% if user.is_authenticated %}
+        <div class="user">
+          <span class="user-name">{{ user.get_username }}</span>
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button class="link" type="submit">Sign out</button>
+          </form>
+        </div>
+      {% endif %}
+      <span class="version">v{{ app_version }}</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    {% if messages %}
+      <div class="alerts">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

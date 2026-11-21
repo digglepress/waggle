@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}SSH keys · {{ app_name }}{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>SSH keys</h1>
+    <p class="muted">Used only to provision new nodes. Stored encrypted with your SECRET_KEY.</p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'servers:key_add' %}">Add key</a>
+</header>
+
+<section class="card">
+  {% if keys %}
+    <table class="table">
+      <thead><tr><th>Name</th><th>Public key</th><th>Used by</th><th>Added</th></tr></thead>
+      <tbody>
+        {% for key in keys %}
+          <tr>
+            <td>{{ key.name }}</td>
+            <td class="mono muted">{{ key.public_key|truncatechars:48|default:"—" }}</td>
+            <td class="muted">{{ key.servers.count }} server{{ key.servers.count|pluralize }}</td>
+            <td class="muted">{{ key.created_at|date:"Y-m-d" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">
+      <p>No keys yet.</p>
+      <p class="muted">Generate one with <code>ssh-keygen -t ed25519 -f waggle_ed25519</code>.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Sign in · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="auth">
+  <div class="card auth-card">
+    <div class="auth-head">
+      <span class="brand-mark">🐝</span>
+      <h1>Sign in to {{ app_name }}</h1>
+      <p class="muted">Your Swarm control plane.</p>
+    </div>
+
+    {% if form.errors %}
+      <div class="alert alert-error">That username and password did not match.</div>
+    {% endif %}
+
+    <form method="post" class="stack">
+      {% csrf_token %}
+      <div class="field">
+        <label for="{{ form.username.id_for_label }}">Username</label>
+        <input class="input" type="text" name="username" id="{{ form.username.id_for_label }}"
+               autocomplete="username" autofocus required>
+      </div>
+      <div class="field">
+        <label for="{{ form.password.id_for_label }}">Password</label>
+        <input class="input" type="password" name="password" id="{{ form.password.id_for_label }}"
+               autocomplete="current-password" required>
+      </div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

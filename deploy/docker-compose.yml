@@ -1,0 +1,62 @@
+name: waggle
+
+x-waggle: &waggle
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+  image: waggle:latest
+  restart: unless-stopped
+  env_file:
+    - .env
+  environment:
+    DJANGO_SETTINGS_MODULE: config.settings.prod
+    WAGGLE_DATA_DIR: /var/lib/waggle
+
+services:
+  web:
+    <<: *waggle
+    ports:
+      - "${WAGGLE_HTTP_PORT:-8000}:8000"
+    volumes:
+      # Root-equivalent access to the manager. See SECURITY.md before exposing
+      # this control plane to the internet.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - waggle-data:/var/lib/waggle
+    networks:
+      - default
+      # Shared with Traefik and every application service (M2).
+      - paas_proxy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4).status == 200 else 1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  worker:
+    <<: *waggle
+    command: ["huey_consumer.py", "config.worker.huey", "-w", "2", "-k", "thread"]
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+      WAGGLE_DATA_DIR: /var/lib/waggle
+      WAGGLE_SKIP_MIGRATE: "1"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - waggle-data:/var/lib/waggle
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  waggle-data:
+
+networks:
+  # Created by deploy/install.sh as an attachable overlay so the control plane
+  # and, later, Traefik can share a network with application services.
+  paas_proxy:
+    external: true
+    name: paas_proxy

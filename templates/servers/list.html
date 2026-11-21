@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Servers · {{ app_name }}{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>Servers</h1>
+    <p class="muted">Every server is a node in the swarm.</p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'servers:add' %}">Add server</a>
+</header>
+
+{% if not cluster.ok %}
+  <div class="alert alert-error"><strong>Cluster unavailable.</strong> {{ cluster.message }}</div>
+{% endif %}
+
+<section class="card">
+  {% if servers %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th><th>Role</th><th>Status</th><th>Availability</th>
+          <th>Address</th><th>Resources</th><th>Docker</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for server in servers %}
+          <tr>
+            <td>
+              <a href="{{ server.get_absolute_url }}">{{ server.name }}</a>
+              {% if server.is_local %}<span class="tag">control plane</span>{% endif %}
+              {% if server.is_builder %}<span class="tag">builder</span>{% endif %}
+            </td>
+            <td class="muted">{{ server.get_role_display }}</td>
+            <td><span class="badge badge-{{ server.status_tone }}">{{ server.get_status_display }}</span></td>
+            <td class="muted">{{ server.get_availability_display }}</td>
+            <td class="mono muted">{{ server.address }}{% if server.ssh_port != 22 %}:{{ server.ssh_port }}{% endif %}</td>
+            <td class="muted">
+              {% if server.cpu_cores %}{{ server.cpu_cores }} vCPU · {% endif %}{{ server.ram_display }}
+            </td>
+            <td class="mono muted">{{ server.docker_version|default:"—" }}</td>
+            <td class="right"><a class="link" href="{{ server.get_absolute_url }}">Open</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">
+      <p>No servers registered.</p>
+      <p class="muted">
+        The control-plane host registers itself after <code>manage.py sync_cluster</code>.
+        Add worker nodes here once the swarm is up.
+      </p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
