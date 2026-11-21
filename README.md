@@ -170,9 +170,9 @@ python manage.py test tests -v 2
 ruff check .
 ```
 
-The suite (71 tests) covers spec conversion, the fake orchestrator, preflight
-parsers, the full bootstrap state machine, log tailing, encrypted fields and the
-HTTP layer. No Docker daemon, no network.
+The suite (80 tests) covers spec conversion, the fake orchestrator, preflight
+parsers, the full bootstrap state machine, Docker installation, log tailing,
+encrypted fields and the HTTP layer. No Docker daemon, no network.
 
 ### Configuration
 

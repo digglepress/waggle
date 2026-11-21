@@ -39,7 +39,7 @@ services:
 
   worker:
     <<: *waggle
-    command: ["huey_consumer.py", "config.worker.huey", "-w", "2", "-k", "thread"]
+    command: ["huey_consumer", "config.worker.huey", "-w", "2", "-k", "thread"]
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.prod
       WAGGLE_DATA_DIR: /var/lib/waggle

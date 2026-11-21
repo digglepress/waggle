@@ -2,7 +2,7 @@
 
 SQLite-backed, no Redis. The consumer is a separate process::
 
-    huey_consumer.py config.worker.huey -w 2 -k thread
+    huey_consumer config.worker.huey -w 2 -k thread
 
 ``config.worker`` calls ``django.setup()`` before importing this module, so
 tasks can import models freely.

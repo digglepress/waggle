@@ -1,4 +1,4 @@
-"""Consumer entrypoint for ``huey_consumer.py config.worker.huey``.
+"""Consumer entrypoint for ``huey_consumer config.worker.huey``.
 
 Django has to be configured before ``config.huey`` (and therefore any task
 module) is imported, so this module exists purely to own that ordering.

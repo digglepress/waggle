@@ -113,10 +113,14 @@ def _same_json(raw: str, expected: dict[str, object]) -> bool:
 
 def _restart_docker(ex: Executor, log: Callable[[str], None]) -> None:
     log("restarting Docker")
-    result = ex.run("systemctl enable --now docker", check=False, timeout=180)
+    # ``enable --now`` does not restart an already-running daemon, so a changed
+    # daemon.json would otherwise be ignored until the next reboot.
+    result = ex.run(
+        "systemctl enable docker && systemctl restart docker", check=False, timeout=180
+    )
     if result.ok:
         return
-    result = ex.run("service docker start", check=False, timeout=180)
+    result = ex.run("service docker restart", check=False, timeout=180)
     if result.ok:
         return
     # `systemctl` inside an unprivileged container cannot manage the host.
@@ -139,6 +143,4 @@ def _ensure_command(ex: Executor, log: Callable[[str], None], command: str) -> N
     elif ex.run("command -v yum", check=False).ok:
         ex.run(f"yum install -y {command}", timeout=600, on_line=log)
     else:
-        raise RemoteCommandError(
-            ex.run(f"{command} is required but no supported package manager was found", check=False)
-        )
+        raise RuntimeError(f"{command} is required but no supported package manager was found")

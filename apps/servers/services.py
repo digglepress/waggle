@@ -82,23 +82,23 @@ def run_bootstrap_for(server: Server, *, orchestrator=None) -> None:
         ]
     )
 
-    executor = build_executor(server)
-    context = BootstrapContext(
-        executor=executor,
-        orchestrator=orchestrator,
-        log=log,
-        data={
-            "name": server.name,
-            "address": server.address,
-            "role": server.role,
-            "labels": server.labels or {},
-            "advertise_addr": server.advertise_addr,
-            "min_ram_mb": settings.NODE_MIN_RAM_MB,
-        },
-        save=save,
-    )
-
+    executor: SSHExecutor | None = None
     try:
+        executor = build_executor(server)
+        context = BootstrapContext(
+            executor=executor,
+            orchestrator=orchestrator,
+            log=log,
+            data={
+                "name": server.name,
+                "address": server.address,
+                "role": server.role,
+                "labels": server.labels or {},
+                "advertise_addr": server.advertise_addr,
+                "min_ram_mb": settings.NODE_MIN_RAM_MB,
+            },
+            save=save,
+        )
         run_bootstrap(context)
     except Exception as exc:
         logger.exception("bootstrap failed for server %s", server.pk)
@@ -112,7 +112,8 @@ def run_bootstrap_for(server: Server, *, orchestrator=None) -> None:
         )
         raise
     finally:
-        executor.close()
+        if executor is not None:
+            executor.close()
 
 
 # --------------------------------------------------------------------------- #

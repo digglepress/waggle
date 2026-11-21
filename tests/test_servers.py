@@ -239,6 +239,14 @@ class BootstrapTaskTests(WaggleTestCase):
         self.assertEqual(server.docker_version, "27.5.1")
         self.assertEqual(server.bootstrap_error, "")
 
+    def test_missing_ssh_key_marks_the_server_failed(self):
+        server = self.make_server(ssh_key=None)
+        with self.assertRaises(ValueError):
+            run_bootstrap_for(server)
+        server.refresh_from_db()
+        self.assertEqual(server.status, Server.Status.ERROR)
+        self.assertIn("no SSH key", server.bootstrap_error)
+
     def test_run_bootstrap_for_records_failure(self):
         server = self.make_server()
         self.orch.add_node("manager-1", role="manager")
