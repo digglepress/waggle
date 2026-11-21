@@ -55,7 +55,16 @@ Milestone 1 of 4 — the cluster layer — is implemented and tested.
 - [ ] **M4 — polish**: onboarding, metrics, multi-manager, docs.
 
 Applications, builds and Traefik are deliberately absent: M1 manages *machines*,
-and says so in the UI.
+and says so in the UI. The installer serves plain HTTP on port 8000; see
+[SECURITY.md](SECURITY.md) before exposing it.
+
+Known gaps carried into M2:
+
+- `docker-py` 7.2 has no `registry_auth` argument on service create/update, so
+  the `--with-registry-auth` equivalent for private images needs a raw API call
+  or the CLI.
+- One manager. Multi-manager failover is an M4 item.
+- No TLS yet; `WAGGLE_SECURE_COOKIES=0` is the M1 default.
 
 ## Quick start
 
