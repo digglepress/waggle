@@ -150,7 +150,7 @@ def deploy(deployment, *, resolved_image=None, on_converge=None):
         ) else None
     else:
         image = resolved_image or build_image(deployment, connection)
-        auth = None  # Built images use the worker's configured push/pull credentials.
+        auth = _built_image_auth()
     spec = make_spec(deployment, image, auth)
     # Recheck after a build; a domain may have been edited while it ran.
     if not values["image"] and domains:
@@ -190,6 +190,23 @@ def _await_convergence(orchestrator, service_id, replicas, *, updating):
             f"Deployment did not converge ({reason}). Rolled back to the previous version."
         )
     raise DeploymentError(f"Deployment did not converge ({reason}).")
+
+
+def _built_image_auth():
+    """Swarm pull credentials for the registry Waggle pushes builds to.
+
+    Buildx pushes with the worker's Docker config; Swarm needs the same
+    credential separately when it pulls the image on a worker node.
+    """
+    host = settings.REGISTRY_HOST
+    if not host:
+        return None
+    connection = SourceConnection.objects.filter(
+        kind=SourceConnection.Kind.REGISTRY, host=host,
+    ).exclude(credential="").first()
+    if not connection:
+        return None
+    return RegistryAuth(connection.host, connection.username, connection.credential)
 
 
 def _deployment_connection(deployment):

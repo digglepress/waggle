@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from apps.deployments.forms import ApplicationForm
 from apps.deployments.models import Application, Deployment, Environment, Project, SourceConnection
-from apps.deployments.services import build_image, make_spec, snapshot
+from apps.deployments.services import build_image, deploy, make_spec, snapshot
 from apps.deployments.tasks import _run
 from orchestrator.fake import FakeOrchestrator
 from orchestrator.types import ConvergenceResult
@@ -147,3 +147,28 @@ class DeploymentTests(TestCase):
         with TemporaryDirectory() as temp, override_settings(BUILD_LOG_DIR=Path(temp)):
             with patch("apps.deployments.services.run_build", side_effect=build):
                 self.assertEqual(build_image(job), f"registry.example.org:5000/waggle-app-demo@{digest}")
+
+    @override_settings(REGISTRY_HOST="registry.example.org:5000")
+    def test_built_images_get_swarm_pull_credentials(self):
+        FakeOrchestrator.reset()
+        fake = FakeOrchestrator()
+        self.addCleanup(FakeOrchestrator.reset)
+        git = SourceConnection.objects.create(kind="git", name="Git", host="example.org")
+        SourceConnection.objects.create(
+            kind="registry", name="Build registry", host="registry.example.org:5000",
+            username="robot", credential="pull-secret",
+        )
+        self.app.image = ""
+        self.app.repository = "https://example.org/demo.git"
+        self.app.revision = "a" * 40
+        self.app.connection = git
+        self.app.save()
+        job = Deployment(application=self.app, spec=snapshot(self.app))
+        image = "registry.example.org:5000/waggle-service-1-demo@sha256:" + "c" * 64
+        with patch("apps.deployments.services.get_orchestrator", return_value=fake), \
+                patch("apps.deployments.services.build_image", return_value=image):
+            deploy(job)
+        spec = next(call[1][0] for call in fake.calls if call[0] == "create_service")
+        self.assertEqual(spec.registry_auth.username, "robot")
+        self.assertEqual(spec.registry_auth.password, "pull-secret")
+        self.assertEqual(spec.registry_auth.host, "registry.example.org:5000")
