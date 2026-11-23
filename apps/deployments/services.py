@@ -246,3 +246,11 @@ def rollback(app):
     except DomainError as exc:
         raise DeploymentError(str(exc)) from exc
     orchestrator.rollback_service(service.id)
+    result = orchestrator.wait_for_convergence(
+        service.id, replicas=service.replicas_desired,
+        timeout=settings.DEPLOY_CONVERGE_TIMEOUT,
+    )
+    if not result.converged:
+        raise DeploymentError(
+            f"Rollback did not converge: {result.message or 'tasks are not running'}."
+        )

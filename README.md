@@ -430,6 +430,8 @@ scrape_configs:
 Metrics contain aggregate counts of saved applications, registered servers by
 last saved state, and deployment records by state. They do not call Docker or
 measure live container CPU/memory. The endpoint is disabled without the token.
+`deploy/prometheus-alerts.yml` is a starting rule set for outage, failed or
+stuck deployments, and non-ready servers.
 
 ### Adding a worker
 

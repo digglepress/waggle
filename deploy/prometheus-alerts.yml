@@ -1,0 +1,40 @@
+# Example Prometheus rules for the Waggle control plane.
+# Requires WAGGLE_METRICS_TOKEN and a scrape job named "waggle".
+groups:
+  - name: waggle
+    rules:
+      - alert: WaggleDown
+        expr: up{job="waggle"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Waggle control plane is unreachable
+          description: Prometheus has failed to scrape Waggle for five minutes.
+
+      - alert: WaggleDeploymentFailures
+        expr: increase(waggle_deployments{state="failed"}[30m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: A Waggle deployment failed in the last 30 minutes
+          description: Check the audit log and the deployment log for the failing service.
+
+      - alert: WaggleDeploymentsStuck
+        expr: waggle_deployments{state="converging"} > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: A Waggle deployment has been waiting for tasks for 15 minutes
+          description: Inspect Swarm tasks and the worker logs; the rollout may be wedged.
+
+      - alert: WaggleServersNotReady
+        expr: waggle_servers{state!="ready"} > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: At least one registered Waggle server is not ready
+          description: Check the Servers page and the node's Docker/Swarm state.
