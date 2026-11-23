@@ -228,8 +228,9 @@ docker exec "$manager" sh -eu -c '
     umask 077
     if [ ! -f .env ]; then
         printf "WAGGLE_SECRET_KEY=%s\n" "$(openssl rand -hex 32)" > .env
-        printf "WAGGLE_ALLOWED_HOSTS=localhost,127.0.0.1\nWAGGLE_SECURE_COOKIES=0\n" >> .env
+        printf "WAGGLE_ALLOWED_HOSTS=localhost,127.0.0.1\nWAGGLE_SECURE_COOKIES=0\nWAGGLE_SSL_REDIRECT=0\n" >> .env
     fi
+    grep -q '^WAGGLE_SSL_REDIRECT=' .env || printf 'WAGGLE_SSL_REDIRECT=0\n' >> .env
     # A drained Swarm node cannot reliably attach a standalone container to
     # its overlay. The lab UI only needs the isolated local Compose bridge;
     # application tasks still attach to paas_proxy on the workers.
