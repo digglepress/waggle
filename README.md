@@ -118,8 +118,13 @@ instead of building on the manager:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/OWNER/waggle/v1.2.3/deploy/install.sh \
   | sudo bash -s -- \
+      --source https://github.com/OWNER/waggle.git --ref v1.2.3 \
       --image ghcr.io/owner/waggle@sha256:…
 ```
+
+The installer clones the tagged source for the Compose file and helper
+scripts, then runs the prebuilt image instead of building on the manager. From
+an existing checkout, `sudo ./deploy/install.sh --image …` does the same.
 
 Release images are signed with cosign. Verify the signature before installing,
 using the identity printed in the release notes:

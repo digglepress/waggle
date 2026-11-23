@@ -103,7 +103,9 @@ jobs:
             echo
             echo '```bash'
             echo "curl -fsSL https://raw.githubusercontent.com/${REPOSITORY}/${VERSION}/deploy/install.sh \\"
-            echo "  | sudo bash -s -- --image ${image_lc}@${DIGEST}"
+            echo "  | sudo bash -s -- \\"
+            echo "      --source https://github.com/${REPOSITORY}.git --ref ${VERSION} \\"
+            echo "      --image ${image_lc}@${DIGEST}"
             echo '```'
             echo
             echo "Verify before installing:"

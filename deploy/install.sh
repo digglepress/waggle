@@ -41,7 +41,7 @@ while [ "$#" -gt 0 ]; do
         -h|--help)
             printf '%s\n' "From a checkout: sudo bash deploy/install.sh" \
                 "Release install: sudo bash deploy/install.sh --image ghcr.io/OWNER/waggle@sha256:…" \
-                "From stdin: sudo bash -s -- --source https://…/repo.git --ref RELEASE_TAG"
+                "From stdin: sudo bash -s -- --source https://…/repo.git --ref RELEASE_TAG [--image …]"
             exit 0
             ;;
         *) die "Unknown option: $1" ;;

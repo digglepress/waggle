@@ -11,3 +11,8 @@ deploy/.env
 .ruff_cache
 .github
 .idea
+.taste-skill
+tests
+deploy/backups
+*.md
+requirements-dev.txt

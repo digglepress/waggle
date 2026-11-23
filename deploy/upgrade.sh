@@ -65,6 +65,11 @@ set_env_value() {
 }
 
 verify_signature() {
+    if [ -n "${WAGGLE_IMAGE_DIGEST:-}" ]; then
+        local actual="${IMAGE##*@}"
+        [ "${actual}" = "${WAGGLE_IMAGE_DIGEST}" ] ||
+            die "image digest mismatch: expected ${WAGGLE_IMAGE_DIGEST}, got ${actual}."
+    fi
     if command -v cosign >/dev/null 2>&1 && [ -n "${WAGGLE_COSIGN_IDENTITY:-}" ]; then
         log "Verifying the release signature"
         cosign verify \
