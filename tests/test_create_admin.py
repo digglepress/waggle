@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from io import StringIO
+
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -7,6 +9,19 @@ from django.test import TestCase
 
 
 class CreateAdminTests(TestCase):
+    def test_generated_credentials_bootstrap_once(self):
+        output = StringIO()
+        call_command("create_admin", "--generate", username="new-admin", stdout=output)
+        password = output.getvalue().split("One-time setup password: ", 1)[1].strip()
+        user = get_user_model().objects.get(username="new-admin")
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.check_password(password))
+        output = StringIO()
+        call_command("create_admin", "--generate", username="new-admin", stdout=output)
+        user.refresh_from_db()
+        self.assertTrue(user.check_password(password))
+        self.assertNotIn(password, output.getvalue())
+
     def test_creates_a_superuser(self):
         call_command("create_admin", username="root", password="correct-horse", verbosity=0)
         user = get_user_model().objects.get(username="root")

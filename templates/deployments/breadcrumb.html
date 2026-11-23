@@ -1,0 +1,16 @@
+<nav class="breadcrumb-nav" aria-label="Breadcrumb">
+  <span class="breadcrumb-icon" aria-hidden="true">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </svg>
+  </span>
+  <span class="breadcrumb-sep">›</span>
+  <a class="breadcrumb-link" href="{% url 'deployments:index' %}">Projects</a>
+  {% if project %}
+    <span class="breadcrumb-sep">›</span>
+    <a class="breadcrumb-link" href="{% url 'deployments:project' project.pk %}">{{ project.name }}</a>
+  {% endif %}
+  <span class="breadcrumb-sep">›</span>
+  <span class="breadcrumb-pill">{% if scope %}{{ scope.name }}{% elif project %}{{ project.name }}{% else %}Overview{% endif %}</span>
+</nav>

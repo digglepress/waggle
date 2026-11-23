@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Iterator
-from typing import Any
+from contextlib import contextmanager
 
 import docker
 import requests
@@ -175,7 +175,9 @@ class SwarmOrchestrator(Orchestrator):
     def create_service(self, spec: ServiceSpec) -> str:
         payload = create_kwargs(spec)
         payload["task_template"] = self._with_network_ids(payload["task_template"])
-        response = self.api.create_service(**payload)
+        self._resolve_file_refs(payload["task_template"])
+        with self._service_api(spec) as api:
+            response = api.create_service(**payload)
         return response["ID"]
 
     @_wrap("update service")
@@ -184,16 +186,37 @@ class SwarmOrchestrator(Orchestrator):
     ) -> None:
         service = self.client.services.get(name_or_id)
         payload = update_kwargs(spec)
+        # The SDK sends a null Name unless it is supplied or fetched. Swarm
+        # treats that as a rename; keep the existing name explicitly.
+        payload["name"] = service.attrs["Spec"]["Name"]
         payload["task_template"] = self._with_network_ids(payload["task_template"])
+        self._resolve_file_refs(payload["task_template"])
         if force:
             payload["task_template"]["ForceUpdate"] = (
                 int(service.attrs.get("Version", {}).get("Index", 0)) + 1
             )
-        self.api.update_service(
-            service.id,
-            version=service.attrs["Version"]["Index"],
-            **payload,
-        )
+        with self._service_api(spec) as api:
+            api.update_service(service.id, version=service.attrs["Version"]["Index"], **payload)
+
+    @contextmanager
+    def _service_api(self, spec: ServiceSpec):
+        auth = spec.registry_auth
+        if not auth:
+            yield self.api
+            return
+        host, _ = docker.auth.resolve_repository_name(spec.image)
+        canonical = "docker.io" if host == "registry-1.docker.io" else host
+        if auth.host != canonical:
+            raise OrchestratorError("Selected credentials do not match the image registry.")
+        # Use a dedicated client so concurrent jobs never share credential state.
+        with SwarmOrchestrator(self._base_url, self._timeout) as isolated:
+            api = isolated.api
+            api._auth_configs = docker.auth.AuthConfig({"auths": {host: {
+                "username": auth.username,
+                "password": auth.password,
+                "serveraddress": docker.auth.INDEX_URL if host == "docker.io" else host,
+            }}})
+            yield api
 
     @_wrap("remove service")
     def remove_service(self, name_or_id: str) -> None:
@@ -205,12 +228,13 @@ class SwarmOrchestrator(Orchestrator):
             service = self.client.services.get(name_or_id)
         except NotFound:
             return None
-        return self._service_info(service.attrs)
+        matches = self.client.services.list(filters={"id": service.id}, status=True)
+        return self._service_info(matches[0].attrs) if matches else None
 
     @_wrap("list services")
     def list_services(self, *, prefix: str | None = None) -> list[ServiceInfo]:
         filters = {"label": "waggle.managed=true"} if prefix is None else None
-        services = self.client.services.list(filters=filters)
+        services = self.client.services.list(filters=filters, status=True)
         infos = [self._service_info(service.attrs) for service in services]
         if prefix:
             infos = [info for info in infos if info.name.startswith(prefix)]
@@ -232,6 +256,7 @@ class SwarmOrchestrator(Orchestrator):
                     desired_state=task.get("DesiredState", ""),
                     error=status.get("Err", "") or "",
                     message=status.get("Message", "") or "",
+                    container_id=(status.get("ContainerStatus") or {}).get("ContainerID", ""),
                 )
             )
         return tasks
@@ -244,22 +269,34 @@ class SwarmOrchestrator(Orchestrator):
         tail: int = 200,
         since: int | None = None,
         follow: bool = False,
+        timestamps: bool = False,
     ) -> Iterator[str]:
         service = self.client.services.get(name_or_id)
         stream = service.logs(
             stdout=True,
             stderr=True,
-            timestamps=False,
+            timestamps=timestamps,
             tail=tail,
             since=since,
             follow=follow,
         )
+        return self._decode_service_logs(stream)
+
+    @staticmethod
+    def _decode_service_logs(stream) -> Iterator[str]:
         if isinstance(stream, bytes):
             yield from stream.decode("utf-8", "replace").splitlines()
             return
-        for chunk in stream:
-            text = chunk.decode("utf-8", "replace") if isinstance(chunk, bytes) else str(chunk)
-            yield from text.splitlines()
+        try:
+            for chunk in stream:
+                text = chunk.decode("utf-8", "replace") if isinstance(chunk, bytes) else str(chunk)
+                yield from text.splitlines()
+        except (DockerException, requests.exceptions.RequestException) as exc:
+            raise OrchestratorError(f"read service logs: {_explain(exc)}") from exc
+        finally:
+            close = getattr(stream, "close", None)
+            if close:
+                close()
 
     @_wrap("roll back service")
     def rollback_service(self, name_or_id: str) -> None:
@@ -268,11 +305,17 @@ class SwarmOrchestrator(Orchestrator):
         # The Docker API takes ``rollback=previous`` as a query parameter, which
         # docker-py does not expose on update_service. Fall back to the private
         # helper rather than reimplementing the whole payload.
-        self.api._post_json(
+        response = self.api._post_json(
             self.api._url(f"/services/{service.id}/update"),
-            data={},
+            data=service.attrs["Spec"],
             params={"version": version, "rollback": "previous"},
         )
+        self.api._raise_for_status(response)
+
+    @_wrap("read previous service labels")
+    def previous_service_labels(self, name_or_id: str) -> dict[str, str]:
+        service = self.client.services.get(name_or_id)
+        return (service.attrs.get("PreviousSpec") or {}).get("Labels") or {}
 
     # ------------------------------------------------------------------ #
     # Secrets, configs, volumes
@@ -347,14 +390,14 @@ class SwarmOrchestrator(Orchestrator):
         role: str | None = None,
     ) -> None:
         node = self.client.nodes.get(node_id)
-        kwargs: dict[str, Any] = {}
+        node_spec = dict(node.attrs["Spec"])
         if availability is not None:
-            kwargs["Availability"] = availability
+            node_spec["Availability"] = availability
         if labels is not None:
-            kwargs["Labels"] = labels
+            node_spec["Labels"] = labels
         if role is not None:
-            kwargs["Role"] = role
-        node.update(**kwargs)
+            node_spec["Role"] = role
+        node.update(node_spec)
 
     @_wrap("remove node")
     def remove_node(self, node_id: str, *, force: bool = False) -> None:
@@ -362,7 +405,7 @@ class SwarmOrchestrator(Orchestrator):
 
     @_wrap("read join tokens")
     def join_tokens(self) -> dict[str, str]:
-        swarm = self.client.swarm.attrs or {}
+        swarm = self.api.inspect_swarm()
         tokens = swarm.get("JoinTokens") or {}
         return {
             "Worker": tokens.get("Worker", ""),
@@ -390,6 +433,18 @@ class SwarmOrchestrator(Orchestrator):
         task_template["Networks"] = resolved
         return task_template
 
+    def _resolve_file_refs(self, template: dict) -> None:
+        container = template["ContainerSpec"]
+        for field, kind, collection_name in (
+            ("Secrets", "Secret", "secrets"), ("Configs", "Config", "configs")
+        ):
+            for ref in container.get(field, []):
+                name = ref[f"{kind}Name"]
+                try:
+                    ref[f"{kind}ID"] = getattr(self.client, collection_name).get(name).id
+                except NotFound:
+                    raise OrchestratorError(f"Swarm {kind.lower()} {name!r} does not exist") from None
+
     @staticmethod
     def _service_info(attrs: dict) -> ServiceInfo:
         spec = attrs.get("Spec") or {}
@@ -411,7 +466,9 @@ class SwarmOrchestrator(Orchestrator):
             name=spec.get("Name", ""),
             image=container.get("Image", ""),
             mode="global" if "Global" in mode else "replicated",
-            replicas_desired=int(status.get("DesiredTasks", 0)),
+            replicas_desired=int(
+                (mode.get("Replicated") or {}).get("Replicas", status.get("DesiredTasks", 0))
+            ),
             replicas_running=int(status.get("RunningTasks", 0)),
             version=int((attrs.get("Version") or {}).get("Index", 0)),
             update_state=(attrs.get("UpdateStatus") or {}).get("State", ""),

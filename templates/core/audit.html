@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Audit log · {{ app_name }}{% endblock %}
+{% block content %}
+<header class="page-head">
+  <div><h1>Audit log</h1><p class="muted">Security-relevant operator actions, newest first.</p></div>
+</header>
+<section class="card">
+  {% if page.object_list %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th><th>Source</th></tr></thead>
+        <tbody>
+          {% for event in page.object_list %}
+            <tr>
+              <td class="mono">{{ event.created_at|date:"Y-m-d H:i:s" }}</td>
+              <td>{{ event.actor.get_username|default:"system" }}</td>
+              <td><code>{{ event.action }}</code></td>
+              <td>{{ event.target_label|default:event.target_type }}{% if event.target_id %} <span class="muted">#{{ event.target_id }}</span>{% endif %}</td>
+              <td class="mono muted">{{ event.ip|default:"—" }}{% if event.request_id %} · {{ event.request_id|slice:":8" }}{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">No audit events yet.</p>
+  {% endif %}
+  {% if page.has_other_pages %}
+    <nav class="actions" aria-label="Audit pagination">
+      {% if page.has_previous %}<a class="btn" href="?page={{ page.previous_page_number }}">Previous</a>{% endif %}
+      <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a class="btn" href="?page={{ page.next_page_number }}">Next</a>{% endif %}
+    </nav>
+  {% endif %}
+</section>
+{% endblock %}

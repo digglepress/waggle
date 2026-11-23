@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Choose Service Source · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="taskk-page">
+  <div class="top-breadcrumb-row">
+    {% include "deployments/breadcrumb.html" with project=scope.project scope=scope %}
+  </div>
+
+  <header class="board-header">
+    <div class="board-title-group">
+      <h1 class="board-title">Add a Resource</h1>
+      <p class="muted">Deploy a new application or container into <strong>{{ scope.name }}</strong> ({{ scope.project.name }}).</p>
+    </div>
+  </header>
+
+  <div class="choose-source-grid">
+    <div class="source-card">
+      <div class="source-card-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v6M6 9v12M6 9a9 9 0 0 1 9-9"/>
+        </svg>
+      </div>
+      <div class="source-card-content">
+        <h2>Git Repository</h2>
+        <p class="muted">Deploy from a GitHub, GitLab, or custom Git repository. Automatically builds from your Dockerfile.</p>
+      </div>
+      <a class="btn btn-primary btn-block" href="{% url 'deployments:new' scope.pk 'git' %}">
+        <span>Use Git repository</span>
+      </a>
+    </div>
+
+    <div class="source-card">
+      <div class="source-card-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+      </div>
+      <div class="source-card-content">
+        <h2>Docker Image</h2>
+        <p class="muted">Deploy an existing image from Docker Hub, GHCR, or a private container registry directly to Swarm.</p>
+      </div>
+      <a class="btn btn-primary btn-block" href="{% url 'deployments:new' scope.pk 'registry' %}">
+        <span>Use Docker image</span>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

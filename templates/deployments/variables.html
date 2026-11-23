@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ app.slug }} · Environment Variables{% endblock %}
+{% block content %}
+<div class="taskk-page">
+  {% include "deployments/app_header.html" with active_tab="variables" %}
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Environment Variables</h2>
+        <p class="muted">Runtime values for this service. Values are literal, not expanded.</p>
+      </div>
+      <div class="view-tabs" role="tablist">
+        <a class="view-tab {% if mode == 'form' %}active{% endif %}" href="?mode=form">Form view</a>
+        <a class="view-tab {% if mode == 'text' %}active{% endif %}" href="?mode=text">Text / .env view</a>
+      </div>
+    </div>
+
+    <form method="post" class="stack" style="margin-top: 14px;">
+      {% csrf_token %}
+      {% if mode == "text" %}
+        <p class="hint">One <code>KEY=value</code> per line. Use quotes to preserve spaces and double quotes with <code>\n</code> for multiline values.</p>
+        {{ form.variables.errors }}
+        {{ form.variables }}
+      {% else %}
+        {{ form.management_form }}
+        {{ form.non_form_errors }}
+        <div class="stack" data-variable-rows>
+          {% for row in form %}{% include "deployments/variable_row.html" %}{% endfor %}
+        </div>
+        <template data-variable-template>{% include "deployments/variable_row.html" with row=form.empty_form %}</template>
+        <button type="button" class="btn btn-sm" data-variable-add>+ Add variable row</button>
+      {% endif %}
+      <div class="actions" style="margin-top: 16px;">
+        <button class="btn btn-primary" type="submit">Save variables</button>
+        <a class="btn" href="{% url 'deployments:detail' app.pk %}">Back to overview</a>
+      </div>
+    </form>
+  </section>
+</div>
+{% if mode == "form" %}<script src="{% static 'js/variable-rows.js' %}" defer></script>{% endif %}
+{% endblock %}

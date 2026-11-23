@@ -9,6 +9,7 @@ interactive TTY. Safe to run repeatedly:
 from __future__ import annotations
 
 import os
+import secrets
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
@@ -33,11 +34,21 @@ class Command(BaseCommand):
             default=os.environ.get("WAGGLE_ADMIN_EMAIL", ""),
             help="Defaults to WAGGLE_ADMIN_EMAIL.",
         )
+        parser.add_argument(
+            "--generate", action="store_true",
+            help="Generate and print a one-time password for a new administrator only.",
+        )
 
     def handle(self, *args, **options):
         username = options["username"]
         password = options["password"]
         email = options["email"]
+        User = get_user_model()
+        if options["generate"]:
+            if User.objects.filter(username=username).exists():
+                self.stdout.write(f"Administrator {username!r} already exists; password unchanged.")
+                return
+            password = secrets.token_urlsafe(24)
 
         if not password:
             raise CommandError(
@@ -46,10 +57,12 @@ class Command(BaseCommand):
         if len(password) < 8:
             raise CommandError("The admin password must be at least 8 characters.")
 
-        User = get_user_model()
-        user, created = User.objects.get_or_create(
-            username=username, defaults={"email": email}
-        )
+        if options["generate"]:
+            user = User.objects.create_superuser(username=username, email=email, password=password)
+            self.stdout.write(self.style.SUCCESS(f"Created admin user {user.username!r}."))
+            self.stdout.write(f"One-time setup password: {password}")
+            return
+        user, created = User.objects.get_or_create(username=username, defaults={"email": email})
         user.is_staff = True
         user.is_superuser = True
         if email:

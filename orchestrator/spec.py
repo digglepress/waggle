@@ -144,6 +144,13 @@ class FileRef:
 
 
 @dataclass(frozen=True, slots=True)
+class RegistryAuth:
+    host: str
+    username: str
+    password: str = field(repr=False)
+
+
+@dataclass(frozen=True, slots=True)
 class ServiceSpec:
     """Everything needed to create or update a Swarm service."""
 
@@ -176,6 +183,7 @@ class ServiceSpec:
     init: bool = False
     log_max_size: str = "10m"
     log_max_files: int = 3
+    registry_auth: RegistryAuth | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         if not self.name:

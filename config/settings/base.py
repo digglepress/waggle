@@ -9,6 +9,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from apps.core.version import VERSION
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
@@ -48,7 +50,8 @@ def env_int(name: str, default: int) -> int:
 DATA_DIR = Path(env("WAGGLE_DATA_DIR", str(BASE_DIR / "data"))).resolve()
 LOG_DIR = DATA_DIR / "logs"
 BUILD_LOG_DIR = LOG_DIR / "deployments"
-for _path in (DATA_DIR, LOG_DIR, BUILD_LOG_DIR):
+LOCK_DIR = DATA_DIR / "locks"
+for _path in (DATA_DIR, LOG_DIR, BUILD_LOG_DIR, LOCK_DIR):
     _path.mkdir(parents=True, exist_ok=True)
 
 # --------------------------------------------------------------------------- #
@@ -56,9 +59,18 @@ for _path in (DATA_DIR, LOG_DIR, BUILD_LOG_DIR):
 # --------------------------------------------------------------------------- #
 
 SECRET_KEY = env("WAGGLE_SECRET_KEY", "dev-insecure-key-change-me")
+
+#: Ordered key ring. The first key encrypts new values; every key can decrypt.
+#: Add a new key first and keep the old one while data is re-encrypted.
+SECRET_KEYS = tuple(env_list("WAGGLE_SECRET_KEYS")) or (SECRET_KEY,)
+if SECRET_KEY not in SECRET_KEYS:
+    SECRET_KEYS = (*SECRET_KEYS, SECRET_KEY)
+
 DEBUG = env_bool("WAGGLE_DEBUG", False)
 ALLOWED_HOSTS = env_list("WAGGLE_ALLOWED_HOSTS", ("*",) if DEBUG else ())
 CSRF_TRUSTED_ORIGINS = env_list("WAGGLE_CSRF_TRUSTED_ORIGINS")
+
+APP_VERSION = VERSION
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -69,11 +81,14 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "apps.core",
     "apps.servers",
+    "apps.deployments",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "apps.core.middleware.RequestIDMiddleware",
+    "apps.core.middleware.SecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -152,7 +167,8 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
-STATIC_ROOT = BASE_DIR / "staticfiles"
+# Kept on the data volume so the control-plane container can run read-only.
+STATIC_ROOT = DATA_DIR / "staticfiles"
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
@@ -175,8 +191,13 @@ PROXY_NETWORK = env("WAGGLE_PROXY_NETWORK", "paas_proxy")
 #: Prefix for every Docker object Waggle creates. Lets Waggle own its namespace.
 OBJECT_PREFIX = env("WAGGLE_OBJECT_PREFIX", "waggle")
 
-#: Default image registry. Populated in M2 when the deploy pipeline lands.
+#: Registry authority (host[:port]) workers can resolve and trust.
 REGISTRY_HOST = env("WAGGLE_REGISTRY_HOST", "")
+BUILD_TIMEOUT = env_int("WAGGLE_BUILD_TIMEOUT", 900)
+ROUTE_TLS = env_bool("WAGGLE_ROUTE_TLS", False)
+TRAEFIK_CERT_RESOLVER = env("WAGGLE_TRAEFIK_CERT_RESOLVER", "")
+METRICS_TOKEN = env("WAGGLE_METRICS_TOKEN", "")
+WEB_TERMINAL = env_bool("WAGGLE_WEB_TERMINAL", False)
 
 #: SSH defaults for node provisioning.
 SSH_CONNECT_TIMEOUT = env_int("WAGGLE_SSH_CONNECT_TIMEOUT", 15)
@@ -187,6 +208,19 @@ HUEY_IMMEDIATE = env_bool("WAGGLE_HUEY_IMMEDIATE", False)
 
 #: How long an SSE log stream may stay open before the client reconnects.
 SSE_STREAM_SECONDS = env_int("WAGGLE_SSE_STREAM_SECONDS", 600)
+
+#: How long a deployment may take to reach its desired running task count.
+DEPLOY_CONVERGE_TIMEOUT = env_int("WAGGLE_DEPLOY_CONVERGE_TIMEOUT", 180)
+
+#: Roll an existing service back to its previous spec when a rollout never
+#: becomes healthy. Disable only if the orchestrator handles this natively.
+DEPLOY_AUTO_ROLLBACK = env_bool("WAGGLE_DEPLOY_AUTO_ROLLBACK", True)
+
+#: JSON logs are easier to ship to Loki/CloudWatch/ELK in production.
+LOG_JSON = env_bool("WAGGLE_LOG_JSON", False)
+
+#: Optional Slack-compatible webhook for deployment results.
+NOTIFY_WEBHOOK_URL = env("WAGGLE_NOTIFY_WEBHOOK_URL", "")
 
 #: Minimum RAM (MB) a node needs before we stop complaining.
 NODE_MIN_RAM_MB = env_int("WAGGLE_NODE_MIN_RAM_MB", 1024)
@@ -200,9 +234,13 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "plain": {"format": "%(asctime)s %(levelname)-7s %(name)s: %(message)s"},
+        "json": {"()": "apps.core.logging.JsonFormatter"},
     },
     "handlers": {
-        "console": {"class": "logging.StreamHandler", "formatter": "plain"},
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json" if LOG_JSON else "plain",
+        },
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
             "filename": str(LOG_DIR / "waggle.log"),

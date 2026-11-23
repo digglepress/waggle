@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  traefik:
+    command:
+      - --providers.swarm.endpoint=unix:///var/run/docker.sock
+      - --providers.swarm.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --certificatesresolvers.letsencrypt.acme.email=${WAGGLE_ACME_EMAIL:?Set an ACME contact email}
+      - --certificatesresolvers.letsencrypt.acme.storage=/var/lib/traefik/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.caserver=${WAGGLE_ACME_CA_SERVER:-https://acme-v02.api.letsencrypt.org/directory}
+    volumes:
+      - traefik-acme:/var/lib/traefik
+
+volumes:
+  traefik-acme:

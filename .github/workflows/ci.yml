@@ -33,10 +33,32 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Lint
-        run: ruff check .
+        run: ruff check apps config orchestrator tests manage.py
+
+      - name: Check shell scripts
+        run: |
+          bash -n deploy/install.sh
+          bash -n deploy/upgrade.sh
+          bash -n deploy/backup.sh
+          bash -n deploy/lab.sh
+          sh -n apps/deployments/terminal-guard.sh
+          shellcheck -S error deploy/install.sh deploy/upgrade.sh deploy/backup.sh deploy/lab.sh
 
       - name: Django system checks
         run: python manage.py check
+
+      - name: Production settings fail closed
+        run: |
+          if python manage.py check --settings=config.settings.prod; then
+            echo "prod settings accepted an insecure configuration" >&2
+            exit 1
+          fi
+
+      - name: Production deploy checks
+        env:
+          WAGGLE_SECRET_KEY: ${{ github.run_id }}-${{ github.run_attempt }}-a-long-random-production-secret
+          WAGGLE_ALLOWED_HOSTS: waggle.example.org
+        run: python manage.py check --deploy --settings=config.settings.prod
 
       - name: Migrations are committed
         run: python manage.py makemigrations --check --dry-run
@@ -44,8 +66,23 @@ jobs:
       - name: Tests
         run: python manage.py test tests -v 2
 
+  security:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Audit pinned runtime dependencies
+        run: |
+          python -m pip install --quiet pip-audit
+          pip-audit --requirement requirements.lock
+
   image:
-    name: build image
+    name: build and smoke-test image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,6 +94,23 @@ jobs:
           context: .
           file: deploy/Dockerfile
           push: false
+          load: true
           tags: waggle:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: waggle:ci
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Production configuration check inside the image
+        run: |
+          docker run --rm --entrypoint python \
+            -e WAGGLE_SECRET_KEY="ci-only-${{ github.run_id }}-${{ github.run_attempt }}-thirty-two-chars-minimum" \
+            -e WAGGLE_ALLOWED_HOSTS=waggle.example.org \
+            waggle:ci manage.py check --deploy --settings=config.settings.prod

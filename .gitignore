@@ -12,6 +12,8 @@ staticfiles/
 htmlcov/
 dist/
 build/
+.taste-skill/
+deploy/backups/
 .DS_Store
 Thumbs.db
 .idea/

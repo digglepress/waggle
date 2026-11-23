@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="page-head"><div><h1>Team</h1><p class="muted">Manage access to this {{ app_name }} instance.</p></div></header>
+{% if password %}
+  <p class="alert alert-warning">Setup password (shown once): <code>{{ password }}</code>. Share it securely and ask the member to change it after signing in.</p>
+{% endif %}
+<section class="card">
+  {% for member in members %}
+    <div class="card-head">
+      <div><strong>{{ member.username }}</strong> · {% if member.is_superuser %}Owner{% elif member.is_staff %}Operator{% else %}Viewer{% endif %}
+      {% if not member.is_active %} · Disabled{% endif %}</div>
+      {% if not member.is_superuser %}
+        <form method="post" action="{% url 'core:team_member' member.pk %}" class="actions">
+          {% csrf_token %}
+          {% if member.is_staff %}<button class="btn" name="action" value="viewer">Make viewer</button>
+          {% else %}<button class="btn" name="action" value="operator">Make operator</button>{% endif %}
+          {% if member.is_active %}<button class="btn" name="action" value="disable">Disable</button>
+          {% else %}<button class="btn" name="action" value="enable">Enable</button>{% endif %}
+        </form>
+      {% endif %}
+    </div>
+  {% endfor %}
+</section>
+<section class="card"><h2>Add team member</h2>
+  <form method="post" class="stack">{% csrf_token %}{{ form.as_p }}
+    <button class="btn btn-primary" type="submit">Create account</button>
+  </form>
+</section>
+{% endblock %}

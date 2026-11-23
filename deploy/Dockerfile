@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.13-slim AS runtime
+FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -35,11 +35,17 @@ RUN set -eux; \
 
 WORKDIR /app
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.lock ./
+RUN pip install --no-cache-dir -r requirements.lock
 
 COPY . .
 RUN chmod +x deploy/entrypoint.sh
+
+ARG WAGGLE_VERSION=dev
+LABEL org.opencontainers.image.title="Waggle" \
+      org.opencontainers.image.description="Swarm-native deployment control plane" \
+      org.opencontainers.image.version="${WAGGLE_VERSION}" \
+      org.opencontainers.image.licenses="Apache-2.0"
 
 EXPOSE 8000
 

@@ -5,14 +5,15 @@ import time
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DetailView, ListView
 
+from apps.core import audit
 from apps.core.logs import read_new_lines
 from apps.core.orchestration import cluster_status
 from orchestrator.errors import OrchestratorError
@@ -40,7 +41,15 @@ class ServerListView(LoginRequiredMixin, ListView):
         return context
 
 
-class ServerCreateView(LoginRequiredMixin, CreateView):
+staff_required = user_passes_test(lambda user: user.is_active and user.is_staff)
+
+
+class StaffOnlyMixin(LoginRequiredMixin, UserPassesTestMixin):
+    def test_func(self):
+        return self.request.user.is_staff
+
+
+class ServerCreateView(StaffOnlyMixin, CreateView):
     model = Server
     form_class = ServerForm
     template_name = "servers/form.html"
@@ -54,6 +63,8 @@ class ServerCreateView(LoginRequiredMixin, CreateView):
         self.object = form.save()
         self.object.status = Server.Status.PROVISIONING
         self.object.save(update_fields=["status", "updated_at"])
+        audit.record(self.request, "server.create", target=self.object,
+                     detail={"role": self.object.role, "address": self.object.address})
         bootstrap_server(self.object.pk)
         messages.info(
             self.request,
@@ -62,7 +73,7 @@ class ServerCreateView(LoginRequiredMixin, CreateView):
         return redirect(self.object.get_absolute_url())
 
 
-class ServerDetailView(LoginRequiredMixin, DetailView):
+class ServerDetailView(StaffOnlyMixin, DetailView):
     model = Server
     template_name = "servers/detail.html"
 
@@ -92,7 +103,7 @@ def _step_state(index: int, server: Server) -> str:
     return "pending"
 
 
-@login_required
+@staff_required
 @require_POST
 def server_action(request, pk: int):
     server = get_object_or_404(Server, pk=pk)
@@ -104,6 +115,8 @@ def server_action(request, pk: int):
                 raise OrchestratorError(
                     "the control-plane host is installed by deploy/install.sh, not bootstrapped"
                 )
+            if not server.can_bootstrap:
+                raise OrchestratorError("this worker joined externally and has no SSH key")
             server.status = Server.Status.PROVISIONING
             server.bootstrap_step = ""
             server.save(update_fields=["status", "bootstrap_step", "updated_at"])
@@ -123,18 +136,22 @@ def server_action(request, pk: int):
             messages.success(request, f"{server.name} is paused. Existing tasks keep running.")
         elif action == "remove":
             name = server.name
+            audit.record(request, "server.remove", target=server)
             remove_server(server)
             messages.success(request, f"{name} was removed from the swarm.")
             return redirect("servers:list")
         else:
             messages.error(request, f"Unknown action: {action!r}")
+            return redirect(server.get_absolute_url())
     except (OrchestratorError, ValueError, ConnectionError) as exc:
         messages.error(request, str(exc))
+    else:
+        audit.record(request, f"server.{action}", target=server)
 
     return redirect(server.get_absolute_url())
 
 
-@login_required
+@staff_required
 def server_log(request, pk: int):
     """Server-sent events carrying the bootstrap log.
 
@@ -178,13 +195,13 @@ def server_log(request, pk: int):
     return response
 
 
-class SSHKeyListView(LoginRequiredMixin, ListView):
+class SSHKeyListView(StaffOnlyMixin, ListView):
     model = SSHKey
     template_name = "servers/keys.html"
     context_object_name = "keys"
 
 
-class SSHKeyCreateView(LoginRequiredMixin, CreateView):
+class SSHKeyCreateView(StaffOnlyMixin, CreateView):
     model = SSHKey
     form_class = SSHKeyForm
     template_name = "servers/key_form.html"
@@ -193,5 +210,7 @@ class SSHKeyCreateView(LoginRequiredMixin, CreateView):
         return reverse("servers:keys")
 
     def form_valid(self, form):
+        response = super().form_valid(form)
+        audit.record(self.request, "ssh_key.create", target=self.object)
         messages.success(self.request, "SSH key saved.")
-        return super().form_valid(form)
+        return response

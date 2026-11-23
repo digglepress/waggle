@@ -32,7 +32,7 @@ class WaggleTestCase(TestCase):
         self.orch = FakeOrchestrator()
         self.orch.reset_state()
 
-        self.user = User.objects.create_user("admin", password="secret")
+        self.user = User.objects.create_user("admin", password="secret", is_staff=True)
         self.client.force_login(self.user)
         self.key = SSHKey.objects.create(
             name="test-key",

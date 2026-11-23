@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ app.slug }} · Containers{% endblock %}
+{% block content %}
+<div class="taskk-page">
+  {% include "deployments/app_header.html" with active_tab="tasks" %}
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>Containers & Swarm Tasks</h2>
+        <p class="muted">Live replicas distributed across swarm worker and manager nodes.</p>
+      </div>
+      <div class="actions">
+        <a class="btn btn-sm" href="{% url 'deployments:terminal' app.pk %}">Terminal</a>
+        <a class="btn btn-sm" href="{% url 'deployments:files' app.pk %}">Files</a>
+      </div>
+    </div>
+
+    {% if error %}
+      <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <div class="projects-cards-grid" style="margin-top: 14px;">
+      {% for task, node in rows %}
+        <article class="task-card">
+          <div class="card-meta">
+            <span class="client-name">Node · {{ node }}</span>
+          </div>
+          <h3 class="card-title">
+            <span>{{ node }}</span>
+            <span class="badge badge-{% if task.state == 'running' %}ok{% else %}info{% endif %}">{{ task.state }}</span>
+          </h3>
+          <p class="mono muted" style="font-size: 11px; margin: 0; word-break: break-all;">
+            Task {{ task.id }}{% if task.container_id %} · Container {{ task.container_id|slice:":12" }}{% endif %}
+          </p>
+          {% if task.is_running and task.container_id %}
+            <div style="margin-top: 6px; font-size: 11px; color: var(--muted); background: var(--surface-2); padding: 6px 8px; border-radius: 6px; word-break: break-all;">
+              <code>exec_app --task {{ task.id|slice:":8" }}</code>
+            </div>
+          {% endif %}
+          <div class="card-footer">
+            <a class="btn btn-sm" href="{% url 'deployments:terminal' app.pk %}" style="width: 100%; justify-content: center;">Exec terminal</a>
+          </div>
+        </article>
+      {% empty %}
+        <div class="empty-state-card span-all">
+          <p class="muted">No active container tasks right now. Deploy the service to start replicas.</p>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

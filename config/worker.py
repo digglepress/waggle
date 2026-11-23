@@ -16,5 +16,6 @@ import django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 django.setup()
 
-import apps.servers.tasks  # noqa: E402,F401  (registers tasks)
+import apps.deployments.tasks  # noqa: E402,F401  (registers tasks)
+import apps.servers.tasks  # noqa: E402,F401
 from config.huey import huey  # noqa: E402,F401

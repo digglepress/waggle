@@ -1,0 +1,14 @@
+[Unit]
+Description=Waggle SQLite backup
+Documentation=file:///opt/waggle/README.md
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+Environment=WAGGLE_BACKUP_DIR=/var/backups/waggle
+Environment=WAGGLE_BACKUP_KEEP_DAYS=14
+# Encrypt off-host copies: Environment=WAGGLE_BACKUP_AGE_RECIPIENT=age1...
+ExecStart=/opt/waggle/deploy/backup.sh
+Nice=10
+IOSchedulingClass=idle

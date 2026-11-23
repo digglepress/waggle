@@ -6,7 +6,7 @@
 <header class="page-head">
   <div>
     <h1>Add a server</h1>
-    <p class="muted">Waggle will SSH in, install Docker, and join the swarm.</p>
+    <p class="muted">{{ app_name }} will SSH in, install Docker, and join the swarm.</p>
   </div>
 </header>
 
@@ -54,6 +54,6 @@
     <li>Join the cluster using a freshly fetched join token.</li>
     <li>Apply node labels and mark the node ready.</li>
   </ol>
-  <p class="hint">The SSH user needs passwordless sudo. Waggle never stores passwords.</p>
+  <p class="hint">The SSH user needs passwordless sudo. {{ app_name }} never stores passwords.</p>
 </section>
 {% endblock %}

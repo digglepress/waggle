@@ -1,0 +1,4 @@
+tls:
+  certificates:
+    - certFile: /run/secrets/waggle_edge_certificate
+      keyFile: /run/secrets/waggle_edge_key

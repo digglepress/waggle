@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ app.slug }} · Terminal{% endblock %}
+{% block content %}
+<div class="taskk-page">
+  {% include "deployments/app_header.html" with active_tab="terminal" %}
+
+  <section class="card terminal-card">
+    <div class="card-head">
+      <div>
+        <h2>Web Terminal</h2>
+        <p class="muted">Execute commands inside running container replicas.</p>
+      </div>
+    </div>
+
+    {% if error %}
+      <p class="alert alert-warning">{{ error }}</p>
+    {% elif not enabled %}
+      <p class="muted">The browser terminal is disabled. Enable <code>WAGGLE_WEB_TERMINAL=1</code> for trusted operators.</p>
+    {% elif not rows %}
+      <p class="muted">No running replicas. Deploy the service, then refresh this page.</p>
+    {% else %}
+      <form method="post" action="{% url 'deployments:terminal_execute' app.pk %}" class="stack" data-terminal-form style="margin-top: 14px;">
+        {% csrf_token %}
+        <div class="card-head">
+          <div class="field" style="margin: 0; min-width: 240px;">
+            <label for="terminal-task">Select Replica</label>
+            <select name="task" id="terminal-task" class="input">
+              {% for task, node in rows %}
+                <option value="{{ task.id }}">{{ node }} · {{ task.id|slice:":12" }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button class="btn btn-sm" type="button" data-terminal-clear>Clear output</button>
+        </div>
+        <pre class="log terminal-output" aria-label="Command output" tabindex="0" data-terminal-output></pre>
+        <div class="field">
+          <label for="terminal-command">Command</label>
+          <div class="actions">
+            <input id="terminal-command" class="input mono terminal-input" name="command" maxlength="{{ command_limit }}"
+                   autocomplete="off" autocapitalize="off" required spellcheck="false" placeholder="e.g. env, ls -la, ps aux">
+            <button class="btn btn-primary" type="submit">Run</button>
+          </div>
+        </div>
+        <p class="muted" role="status" data-terminal-status style="font-size: 12px;">Commands run independently with a 20-second timeout. Do not enter credentials.</p>
+      </form>
+      <script src="{% static 'js/terminal.js' %}" defer></script>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

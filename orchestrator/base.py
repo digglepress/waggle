@@ -83,11 +83,16 @@ class Orchestrator(ABC):
         tail: int = 200,
         since: int | None = None,
         follow: bool = False,
+        timestamps: bool = False,
     ) -> Iterator[str]:
         """Stream decoded log lines. ``follow=True`` blocks until the caller stops."""
 
     @abstractmethod
     def rollback_service(self, name_or_id: str) -> None: ...
+
+    def previous_service_labels(self, name_or_id: str) -> dict[str, str]:
+        """Labels restored by a native rollback, if the backend exposes them."""
+        return {}
 
     # ------------------------------------------------------------------ #
     # Secrets, configs, volumes

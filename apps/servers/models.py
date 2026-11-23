@@ -127,7 +127,7 @@ class Server(TimeStampedModel):
         return reverse("servers:detail", args=[self.pk])
 
     def clean(self) -> None:
-        if not self.is_local and self.ssh_key_id is None:
+        if not self.is_local and not self.swarm_node_id and self.ssh_key_id is None:
             raise ValidationError({"ssh_key": "An SSH key is required for remote servers."})
 
     # ------------------------------------------------------------------ #
@@ -137,6 +137,10 @@ class Server(TimeStampedModel):
     @property
     def is_remote(self) -> bool:
         return not self.is_local
+
+    @property
+    def can_bootstrap(self) -> bool:
+        return self.is_remote and self.ssh_key_id is not None
 
     @property
     def is_manager(self) -> bool:

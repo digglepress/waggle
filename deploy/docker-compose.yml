@@ -4,13 +4,29 @@ x-waggle: &waggle
   build:
     context: ..
     dockerfile: deploy/Dockerfile
-  image: waggle:latest
+  image: ${WAGGLE_IMAGE:-waggle:latest}
   restart: unless-stopped
   env_file:
     - .env
   environment:
     DJANGO_SETTINGS_MODULE: config.settings.prod
     WAGGLE_DATA_DIR: /var/lib/waggle
+    DOCKER_CONFIG: /var/lib/waggle/docker-config
+    HOME: /var/lib/waggle
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  read_only: true
+  tmpfs:
+    - /tmp:size=256m,mode=1777
+  pids_limit: 512
+  stop_grace_period: 30s
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
 
 services:
   web:
@@ -26,16 +42,22 @@ services:
       - default
       # Shared with Traefik and every application service (M2).
       - paas_proxy
+    mem_limit: ${WAGGLE_WEB_MEMORY:-512m}
     healthcheck:
       test:
         - CMD
         - python
         - -c
-        - "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4).status == 200 else 1)"
+        - |
+          import sys, urllib.request
+          request = urllib.request.Request(
+              "http://127.0.0.1:8000/readyz", headers={"X-Forwarded-Proto": "https"}
+          )
+          sys.exit(0 if urllib.request.urlopen(request, timeout=4).status == 200 else 1)
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
   worker:
     <<: *waggle
@@ -44,9 +66,12 @@ services:
       DJANGO_SETTINGS_MODULE: config.settings.prod
       WAGGLE_DATA_DIR: /var/lib/waggle
       WAGGLE_SKIP_MIGRATE: "1"
+      DOCKER_CONFIG: /var/lib/waggle/docker-config
+      HOME: /var/lib/waggle
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - waggle-data:/var/lib/waggle
+    mem_limit: ${WAGGLE_WORKER_MEMORY:-384m}
     depends_on:
       web:
         condition: service_healthy
@@ -59,4 +84,4 @@ networks:
   # and, later, Traefik can share a network with application services.
   paas_proxy:
     external: true
-    name: paas_proxy
+    name: "${WAGGLE_PROXY_NETWORK:-paas_proxy}"

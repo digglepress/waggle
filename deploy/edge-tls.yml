@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  traefik:
+    configs:
+      - source: traefik_tls
+        target: /etc/traefik/dynamic/tls.yml
+    secrets:
+      - waggle_edge_certificate
+      - waggle_edge_key
+
+configs:
+  traefik_tls:
+    file: ./traefik-tls.yml
+
+secrets:
+  waggle_edge_certificate:
+    external: true
+  waggle_edge_key:
+    external: true

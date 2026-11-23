@@ -1,18 +1,19 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Sign in · {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="auth">
-  <div class="card auth-card">
-    <div class="auth-head">
-      <span class="brand-mark">🐝</span>
-      <h1>Sign in to {{ app_name }}</h1>
-      <p class="muted">Your Swarm control plane.</p>
-    </div>
+<section class="auth" aria-labelledby="auth-title">
+  <div class="auth-intro" data-enter>
+    <h1 id="auth-title" data-moment="liquid-type" data-moment-opts='{"strength":0.3}'>Docker Swarm control plane</h1>
+    <p>Deploy applications, manage servers, and check cluster health in {{ app_name }}.</p>
+  </div>
+  <div class="auth-card">
+    <h2>Sign in to {{ app_name }}</h2>
 
     {% if form.errors %}
-      <div class="alert alert-error">That username and password did not match.</div>
+      <div class="alert alert-error" id="signin-error" role="alert">That username and password did not match.</div>
     {% endif %}
 
     <form method="post" class="stack">
@@ -20,16 +21,20 @@
       <div class="field">
         <label for="{{ form.username.id_for_label }}">Username</label>
         <input class="input" type="text" name="username" id="{{ form.username.id_for_label }}"
-               autocomplete="username" autofocus required>
+               autocomplete="username" required{% if form.errors %} aria-invalid="true" aria-describedby="signin-error"{% endif %}>
       </div>
       <div class="field">
         <label for="{{ form.password.id_for_label }}">Password</label>
         <input class="input" type="password" name="password" id="{{ form.password.id_for_label }}"
-               autocomplete="current-password" required>
+               autocomplete="current-password" required{% if form.errors %} aria-invalid="true" aria-describedby="signin-error"{% endif %}>
       </div>
       <input type="hidden" name="next" value="{{ next }}">
       <button class="btn btn-primary btn-block" type="submit">Sign in</button>
     </form>
   </div>
-</div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{% static 'js/moments/moments.js' %}"></script>
 {% endblock %}

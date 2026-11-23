@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="taskk-page">
+  <div class="top-breadcrumb-row">
+    {% include "deployments/breadcrumb.html" with project=project scope=None %}
+  </div>
+
+  <header class="board-header">
+    <div class="board-title-group">
+      <h1 class="board-title">{{ project.name }}</h1>
+      <p class="muted">Manage environments and deployed services for this project.</p>
+    </div>
+    <div class="board-toolbar">
+      <div class="toolbar-actions">
+        <a class="btn-import" href="{% url 'deployments:index' %}">
+          <span>← Back to Projects</span>
+        </a>
+        {% if user.is_staff %}
+          <a class="btn-new-board" href="{% url 'deployments:new_environment' project.pk %}">
+            <span>+ New environment</span>
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Environments</h2>
+    </div>
+    <div class="projects-cards-grid">
+      {% for item in project.environments.all %}
+        <article class="task-card">
+          <div class="card-meta">
+            <span class="client-name">Environment · {{ item.slug }}</span>
+          </div>
+          <h3 class="card-title">
+            <a href="{% url 'deployments:environment' item.pk %}">{{ item.name }}</a>
+          </h3>
+          <div class="card-assignee-tags">
+            <div class="tags-group">
+              <span class="badge-tag tag-web">{{ item.applications.count }} service{% if item.applications.count != 1 %}s{% endif %}</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="card-stats">
+              <span class="stat-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                <span>Active</span>
+              </span>
+            </div>
+            <a class="card-due" href="{% url 'deployments:environment' item.pk %}" style="text-decoration: none;">
+              <span>Open →</span>
+            </a>
+          </div>
+        </article>
+      {% empty %}
+        <div class="empty-state-card span-all">
+          <p class="muted">Add an environment such as Production or Staging.</p>
+          {% if user.is_staff %}
+            <a class="btn-new-board" href="{% url 'deployments:new_environment' project.pk %}" style="margin-top: 12px; display: inline-flex;">
+              <span>+ New environment</span>
+            </a>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

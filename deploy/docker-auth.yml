@@ -1,0 +1,7 @@
+services:
+  worker:
+    environment:
+      DOCKER_CONFIG: /run/waggle-docker
+      BUILDX_CONFIG: /tmp/waggle-buildx
+    volumes:
+      - "${WAGGLE_DOCKER_CONFIG_DIR:?Set the Docker credential directory}:/run/waggle-docker:ro"

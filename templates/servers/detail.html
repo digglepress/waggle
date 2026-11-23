@@ -21,7 +21,7 @@
       <button class="btn btn-ghost" type="submit">Refresh</button>
     </form>
 
-    {% if server.is_remote and not is_busy %}
+    {% if server.can_bootstrap and not is_busy %}
       <form method="post" action="{% url 'servers:action' server.pk %}">
         {% csrf_token %}
         <input type="hidden" name="action" value="bootstrap">
@@ -74,6 +74,8 @@
         This is the control-plane host. It was installed by <code>deploy/install.sh</code>
         and registers itself with <code>manage.py sync_cluster</code>.
       </p>
+    {% elif not server.can_bootstrap %}
+      <p class="muted">This worker joined outside {{ app_name }}. It is managed through Swarm and has no SSH credentials.</p>
     {% else %}
       <ol class="steps">
         {% for step in steps %}

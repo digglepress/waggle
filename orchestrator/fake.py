@@ -239,8 +239,10 @@ class FakeOrchestrator(Orchestrator):
         tail: int = 200,
         since: int | None = None,
         follow: bool = False,
+        timestamps: bool = False,
     ) -> Iterator[str]:
-        self._record("service_logs", name_or_id, tail=tail, since=since, follow=follow)
+        self._record("service_logs", name_or_id, tail=tail, since=since, follow=follow,
+                     timestamps=timestamps)
         record = self._find(name_or_id)
         lines = self.log_lines.get(record["spec"].name, [f"log line for {record['spec'].name}"])
         yield from lines[-tail:]

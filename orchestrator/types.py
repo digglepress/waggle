@@ -81,6 +81,7 @@ class TaskInfo:
     error: str = ""
     message: str = ""
     updated_at: datetime | None = None
+    container_id: str = ""
 
     @property
     def is_running(self) -> bool:

@@ -1,0 +1,20 @@
+name: waggle-registry
+
+services:
+  registry:
+    image: registry:2
+    restart: unless-stopped
+    ports:
+      - "${WAGGLE_REGISTRY_BIND:?Set the manager private IP and registry port}:5000"
+    environment:
+      REGISTRY_HTTP_TLS_CERTIFICATE: /run/registry/tls.crt
+      REGISTRY_HTTP_TLS_KEY: /run/registry/tls.key
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Waggle Registry
+      REGISTRY_AUTH_HTPASSWD_PATH: /run/registry/htpasswd
+    volumes:
+      - registry-data:/var/lib/registry
+      - "${WAGGLE_REGISTRY_FILES:?Set the directory with tls.crt, tls.key and htpasswd}:/run/registry:ro"
+
+volumes:
+  registry-data:

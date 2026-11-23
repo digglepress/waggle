@@ -6,6 +6,7 @@ the database what is encrypted and prevents accidental double encryption.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from django.db import models
@@ -30,3 +31,16 @@ class EncryptedTextField(models.TextField):
         if text.startswith(PREFIX):
             return text
         return PREFIX + encrypt(text)
+
+
+class EncryptedJSONField(EncryptedTextField):
+    """Opaque JSON: persisted as authenticated ciphertext, not queryable JSON."""
+
+    def from_db_value(self, value, expression, connection):
+        raw = super().from_db_value(value, expression, connection)
+        return json.loads(raw) if raw is not None else None
+
+    def get_prep_value(self, value):
+        if value is None:
+            return None
+        return super().get_prep_value(json.dumps(value, ensure_ascii=False))
