@@ -1,5 +1,3 @@
-import logging
-
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -27,11 +25,14 @@ from apps.deployments.models import (
     SourceConnection,
     Tag,
 )
-from apps.deployments.services import owned_service, service_name, snapshot
-from apps.deployments.tasks import deploy_application
+from apps.deployments.queueing import (
+    DeploymentConflict,
+    DeploymentQueueError,
+    queue_deployment,
+)
+from apps.deployments.services import owned_service, service_name
 from orchestrator.errors import OrchestratorError
 
-logger = logging.getLogger("waggle.deployments")
 staff_required = user_passes_test(lambda user: user.is_active and user.is_staff)
 
 
@@ -298,13 +299,12 @@ def revert_to(request, pk, job_id):
 def _queue(request, pk, operation, *, target=None):
     app = get_object_or_404(Application, pk=pk)
     try:
-        with transaction.atomic():
-            job = Deployment.objects.create(
-                application=app, operation=operation, spec=target.spec if target else snapshot(app),
-                rollback_target=target, image=target.image if target else "",
-            )
-    except IntegrityError:
+        job = queue_deployment(app, operation, target=target)
+    except DeploymentConflict:
         messages.error(request, "This application already has a deployment in progress.")
+        return redirect("deployments:detail", pk=pk)
+    except DeploymentQueueError:
+        messages.error(request, "Could not queue deployment.")
         return redirect("deployments:detail", pk=pk)
     audit.record(
         request,
@@ -315,14 +315,6 @@ def _queue(request, pk, operation, *, target=None):
             "rollback_target": target.pk if target else None,
         },
     )
-    try:
-        deploy_application(job.pk)
-    except Exception:
-        logger.exception("Could not enqueue deployment %s", job.pk)
-        Deployment.objects.filter(pk=job.pk, state=Deployment.State.QUEUED).update(
-            state=Deployment.State.FAILED, error="Could not queue deployment. Check the worker logs.",
-        )
-        messages.error(request, "Could not queue deployment.")
     return redirect("deployments:job", pk=pk, job_id=job.pk)
 
 

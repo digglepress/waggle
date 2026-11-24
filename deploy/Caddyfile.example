@@ -1,0 +1,30 @@
+# Reference Caddy configuration for the Waggle control plane.
+#
+#   sudo cp deploy/Caddyfile.example /etc/caddy/Caddyfile
+#   sudo sed -i 's/waggle.example.org/your.host/' /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# Caddy obtains and renews the certificate. Keep Waggle bound to localhost:
+#   WAGGLE_HTTP_PORT=127.0.0.1:8000
+#   WAGGLE_ALLOWED_HOSTS=your.host
+#   WAGGLE_CSRF_TRUSTED_ORIGINS=https://your.host
+#   WAGGLE_SECURE_COOKIES=1
+
+waggle.example.org {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8000
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/waggle-access.log {
+			roll_size 20MiB
+			roll_keep 5
+		}
+	}
+}

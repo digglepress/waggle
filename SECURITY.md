@@ -69,6 +69,18 @@ secret key separately, and test a restore into a fresh data directory. A copy
 of the database without the matching `WAGGLE_SECRET_KEY` cannot decrypt stored
 SSH keys, source credentials or environment values.
 
+## Automation API
+
+- API tokens are bearer credentials. Use HTTPS, keep them in a CI secret
+  store, and prefer a `read` token for dashboards and a separate `deploy`
+  token for pipelines.
+- Only a SHA-256 digest is stored. Revoke a token with
+  `manage.py create_api_token --revoke PREFIX`; revocation is immediate.
+- The API cannot read environment values, secrets, logs or files, and it does
+  not bypass the operator-only terminal or file browser.
+- Every API deployment is recorded in the audit log with the token name, not
+  the token value.
+
 ## Provisioning
 
 - SSH host keys are pinned on first use (trust on first use) and stored on the

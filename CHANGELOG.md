@@ -32,6 +32,13 @@ All notable changes to Waggle are documented here. The format follows
   `no-new-privileges` and log rotation.
 - Pinned runtime dependencies in `requirements.lock` and a digest-pinned base
   image.
+- Scoped bearer-token API for listing services, reading deployment status,
+  deploying and rolling back, plus a `create_api_token` management command.
+- Offline installs from a checksummed image tarball and a reference Caddy
+  configuration for control-plane TLS.
+- `deploy/volume-backup.sh` for compressed, checksummed backup and verified
+  restore of application volumes on the node that holds them.
+- Core migrations for the audit log and API tokens.
 
 ### Changed
 

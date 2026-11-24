@@ -49,7 +49,7 @@ class DeploymentTests(TestCase):
     def test_queue_snapshots_configuration_and_rejects_duplicate(self):
         self.client.force_login(self.staff)
         path = reverse("deployments:launch", args=[self.app.pk])
-        with patch("apps.deployments.views.deploy_application") as enqueue:
+        with patch("apps.deployments.queueing.deploy_application") as enqueue:
             response = self.client.post(path)
             self.client.post(path)
         job = Deployment.objects.get()

@@ -49,7 +49,7 @@ class ServiceOperationsTests(TestCase):
         )
         self.app.environment = {"CHANGE": "new"}
         self.app.save(update_fields=["environment"])
-        with patch("apps.deployments.views.deploy_application") as enqueue:
+        with patch("apps.deployments.queueing.deploy_application") as enqueue:
             result = self.client.post(reverse("deployments:rollback_to", args=[self.app.pk, old.pk]))
         self.assertEqual(result.status_code, 302)
         rollback = Deployment.objects.get(rollback_target=old)

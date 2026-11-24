@@ -197,6 +197,29 @@ database schema is upgraded by the entrypoint migration before the health
 check; a rollback across an incompatible schema still needs the pre-upgrade
 backup. Keep `WAGGLE_BACKUP_DIR` on a different disk or host.
 
+### Terminate TLS in front of the control plane
+
+Waggle trusts `X-Forwarded-Proto` from a loopback proxy. The reference setup
+uses Caddy on the manager:
+
+1. Bind Waggle to loopback: set `WAGGLE_HTTP_PORT=127.0.0.1:8000` in
+   `deploy/.env`.
+2. Set `WAGGLE_ALLOWED_HOSTS=your.host`,
+   `WAGGLE_CSRF_TRUSTED_ORIGINS=https://your.host` and
+   `WAGGLE_SECURE_COOKIES=1`. Leave `WAGGLE_SSL_REDIRECT=0`; Caddy performs
+   the redirect, and redirecting twice can loop.
+3. Point DNS at the manager and allow inbound TCP 80 and 443.
+4. Install Caddy and use `deploy/Caddyfile.example`:
+   `sudo cp deploy/Caddyfile.example /etc/caddy/Caddyfile`, replace the
+   hostname, then `sudo systemctl reload caddy`.
+5. Recreate the control plane:
+   `docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d`.
+
+Caddy terminates TLS and proxies to `127.0.0.1:8000`, which is never exposed
+off the host. If you route applications through Traefik on the same host, give
+the two proxies different public ports or terminate both at Caddy. Do not
+publish port 8000 directly.
+
 ### Creating and deploying a service
 
 Sign in as a staff user and open **Projects → New project**. Create an
@@ -374,6 +397,38 @@ to 24 KiB. Browsing uses the same operator permissions, node checks and
 opt-in setting as Terminal. The container image needs `sh`, `timeout`,
 `find`, `head`, and `base64`; binary previews and editing are not supported.
 
+### Automate deployments with the API
+
+Create a scoped token on the manager. The raw token is printed once:
+
+```bash
+docker compose -f deploy/docker-compose.yml exec -T web \
+  python manage.py create_api_token --name ci --scope read --scope deploy
+```
+
+Send it as a bearer token over TLS:
+
+```bash
+curl -fsS -H "Authorization: Bearer $WAGGLE_TOKEN" \
+  https://waggle.example.org/api/v1/services/
+
+curl -fsS -X POST -H "Authorization: Bearer $WAGGLE_TOKEN" \
+  https://waggle.example.org/api/v1/services/12/deploy
+
+curl -fsS -H "Authorization: Bearer $WAGGLE_TOKEN" \
+  https://waggle.example.org/api/v1/deployments/34/
+```
+
+`read` lists services and deployment status; `deploy` also queues deploys and
+rollbacks. `POST /services/<id>/rollback` accepts an optional JSON body
+`{"deployment_id": 34}` to return to a specific successful revision. A second
+deploy while one is active returns `409`. List tokens with
+`create_api_token --list`, and disable one with `--revoke PREFIX`. Tokens are
+stored as SHA-256 digests; losing the raw value means issuing a new token.
+
+The API is intentionally small. There is no endpoint for editing
+configuration or reading secrets, environment values or logs.
+
 ### Back up and restore the control plane
 
 `backup_data` takes a consistent SQLite snapshot, including changes in WAL,
@@ -417,6 +472,28 @@ from the recovered database, or stored SSH keys cannot be decrypted. The
 backup does **not** include Docker volumes, images, Swarm state, registry data,
 logs or the Huey queue. Restore marks in-flight jobs as interrupted; inspect
 Swarm before retrying them, especially if the cluster kept running.
+
+### Back up and restore an application volume
+
+Service data lives in Swarm-local volumes, which are not replicated and are not
+part of the control-plane backup. Back up and restore on the node that holds
+the volume:
+
+```bash
+sudo ./deploy/volume-backup.sh backup \
+  waggle-service-12-api-data /var/backups/waggle/volumes
+
+sudo ./deploy/volume-backup.sh restore \
+  waggle-service-12-api-data \
+  /var/backups/waggle/volumes/waggle-service-12-api-data-20261124T020000Z.tgz --yes
+```
+
+The backup is a compressed tar written with a SHA-256 file; restore verifies
+the checksum and the archive before writing, and requires `--yes`. Volume
+names are shown on the service page. Stop or scale the service to zero before a
+backup if the application needs a consistent snapshot. Restore does not delete
+files that are absent from the archive. Copy the archive to another host after
+the backup; a volume on the same node is not a disaster-recovery copy.
 
 ### Monitor the control plane
 
