@@ -42,7 +42,7 @@ services:
       - default
       # Shared with Traefik and every application service (M2).
       - paas_proxy
-    mem_limit: ${WAGGLE_WEB_MEMORY:-512m}
+    mem_limit: ${WAGGLE_WEB_MEMORY:-384m}
     healthcheck:
       test:
         - CMD
@@ -71,7 +71,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - waggle-data:/var/lib/waggle
-    mem_limit: ${WAGGLE_WORKER_MEMORY:-384m}
+    mem_limit: ${WAGGLE_WORKER_MEMORY:-256m}
     depends_on:
       web:
         condition: service_healthy

@@ -33,14 +33,17 @@ die()  { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 SOURCE=""
 REF=""
 IMAGE="${WAGGLE_IMAGE:-}"
+OFFLINE="${WAGGLE_OFFLINE:-}"
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --source) [ "$#" -ge 2 ] || die "--source needs a repository URL."; SOURCE="$2"; shift 2 ;;
         --ref) [ "$#" -ge 2 ] || die "--ref needs a release tag or branch."; REF="$2"; shift 2 ;;
         --image) [ "$#" -ge 2 ] || die "--image needs a pinned image reference."; IMAGE="$2"; shift 2 ;;
+        --offline) [ "$#" -ge 2 ] || die "--offline needs an image tarball."; OFFLINE="$2"; shift 2 ;;
         -h|--help)
             printf '%s\n' "From a checkout: sudo bash deploy/install.sh" \
                 "Release install: sudo bash deploy/install.sh --image ghcr.io/OWNER/waggle@sha256:…" \
+                "Offline install: sudo bash deploy/install.sh --image … --offline waggle-image.tar" \
                 "From stdin: sudo bash -s -- --source https://…/repo.git --ref RELEASE_TAG [--image …]"
             exit 0
             ;;
@@ -73,7 +76,7 @@ if [ -n "${SOURCE}" ]; then
     fi
     log "Fetching Waggle ${REF} into ${TARGET}"
     ${SUDO} git clone --depth 1 --branch "${REF}" -- "${SOURCE}" "${TARGET}"
-    exec ${SUDO} env ${IMAGE:+WAGGLE_IMAGE=${IMAGE}} bash "${TARGET}/deploy/install.sh"
+    exec ${SUDO} env ${IMAGE:+WAGGLE_IMAGE=${IMAGE}} ${OFFLINE:+WAGGLE_OFFLINE=${OFFLINE}} bash "${TARGET}/deploy/install.sh"
 fi
 [ -z "${REF}" ] || die "--ref requires --source."
 
@@ -123,6 +126,12 @@ verify_image() {
         [ "${actual}" = "${WAGGLE_IMAGE_DIGEST}" ] ||
             die "image digest mismatch: expected ${WAGGLE_IMAGE_DIGEST}, got ${actual}."
     fi
+    if [ -n "${OFFLINE}" ]; then
+        if [ "${WAGGLE_REQUIRE_SIGNATURE:-0}" = "1" ]; then
+            warn "offline install verifies the tarball checksum, not the registry signature; verify the digest before transfer."
+        fi
+        return 0
+    fi
     if command -v cosign >/dev/null 2>&1; then
         if [ -n "${WAGGLE_COSIGN_IDENTITY:-}" ]; then
             log "Verifying the release signature"
@@ -137,6 +146,23 @@ verify_image() {
     elif [ "${WAGGLE_REQUIRE_SIGNATURE:-0}" = "1" ]; then
         die "WAGGLE_REQUIRE_SIGNATURE=1 requires cosign on PATH."
     fi
+}
+
+load_offline_image() {
+    [ -n "${OFFLINE}" ] || return 0
+    [ -n "${IMAGE}" ] || die "--offline also needs the --image reference it contains."
+    [ -f "${OFFLINE}" ] || die "cannot find the offline image tarball ${OFFLINE}."
+    if [ -f "${OFFLINE}.sha256" ]; then
+        local checksum_dir checksum_file
+        checksum_dir="$(cd "$(dirname "${OFFLINE}")" && pwd)"
+        checksum_file="$(basename "${OFFLINE}").sha256"
+        ( cd "${checksum_dir}" && sha256sum -c "${checksum_file}" ) ||
+            die "the offline image checksum did not verify."
+    else
+        warn "no ${OFFLINE}.sha256 next to the tarball; checksum verification skipped."
+    fi
+    log "Loading the offline release image"
+    ${SUDO} docker load --input "${OFFLINE}" >/dev/null
 }
 
 set_env_value() {
@@ -344,7 +370,11 @@ PROXY_NETWORK="$(sed -n 's/^WAGGLE_PROXY_NETWORK=//p' "${ENV_FILE}" | tail -n 1)
 PROXY_NETWORK="${WAGGLE_PROXY_NETWORK:-${PROXY_NETWORK:-paas_proxy}}"
 ensure_network
 
-if [ -n "${IMAGE}" ]; then
+if [ -n "${OFFLINE}" ]; then
+    load_offline_image
+    log "Starting Waggle from the offline image ${IMAGE}"
+    compose up -d --no-build
+elif [ -n "${IMAGE}" ]; then
     log "Pulling the pinned release image"
     compose pull web worker
     log "Starting Waggle from ${IMAGE}"

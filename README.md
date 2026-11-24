@@ -140,6 +140,20 @@ Set `WAGGLE_REQUIRE_SIGNATURE=1` and `WAGGLE_COSIGN_IDENTITY` to make the
 installer and upgrader refuse an unsigned image. The installer rejects
 mutable tags by default; `WAGGLE_ALLOW_UNPINNED=1` exists only for local tests.
 
+For an air-gapped manager, pull the digest on a connected host, verify it,
+then save and transfer the image:
+
+```bash
+docker pull ghcr.io/owner/waggle@sha256:…
+docker save -o waggle-image.tar ghcr.io/owner/waggle@sha256:…
+sha256sum waggle-image.tar > waggle-image.tar.sha256
+# transfer both files, then:
+sudo ./deploy/install.sh --image ghcr.io/owner/waggle@sha256:… \
+  --offline ./waggle-image.tar
+```
+
+The installer verifies `waggle-image.tar.sha256` before loading it.
+
 To install from source without cloning first (trusted release tag only):
 
 ```bash
