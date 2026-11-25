@@ -30,20 +30,24 @@
     <div class="app-banner-actions">
       {% if hostnames %}
         {% for hostname in hostnames %}
-          <a class="btn-import btn-sm" href="{% if active_tls %}https{% else %}http{% endif %}://{{ hostname }}" target="_blank" rel="noopener">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
+          <c-button href="{% if active_tls %}https{% else %}http{% endif %}://{{ hostname }}" variant="import" size="sm" target="_blank" rel="noopener">
+            <c-slot name="icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
+            </c-slot>
             <span>Open {{ hostname }}</span>
-          </a>
+          </c-button>
         {% endfor %}
       {% endif %}
 
       {% if user.is_staff %}
-        <form method="post" action="{% url 'deployments:launch' app.pk %}" style="margin: 0;">
+        <form method="post" action="{% url 'deployments:launch' app.pk %}">
           {% csrf_token %}
-          <button class="btn-new-board btn-sm" type="submit">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <c-button type="submit" variant="new" size="sm">
+            <c-slot name="icon">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </c-slot>
             <span>Deploy</span>
-          </button>
+          </c-button>
         </form>
       {% endif %}
     </div>

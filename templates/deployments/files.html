@@ -2,27 +2,19 @@
 {% load static %}
 {% block title %}{{ app.slug }} · Files{% endblock %}
 {% block content %}
-<div class="waggle-page">
+<div class="waggle-page pl-page">
   {% include "deployments/app_header.html" with active_tab="files" %}
 
-  <section class="card">
-    <div class="card-head">
-      <div>
-        <h2>Container File Browser</h2>
-        <p class="muted">Inspect filesystem and file contents of live container replicas.</p>
-      </div>
-    </div>
-
+  <c-card title="Container File Browser" subtitle="Inspect filesystem and file contents of live container replicas.">
     {% if error %}
-      <p class="alert alert-warning">{{ error }}</p>
+      <c-alert tone="warning">{{ error }}</c-alert>
     {% elif not enabled %}
       <p class="muted">File browsing is disabled. Enable <code>WAGGLE_WEB_TERMINAL=1</code> for trusted operators.</p>
     {% elif not rows %}
       <p class="muted">No running replicas. Deploy the service, then refresh this page.</p>
     {% else %}
-      <form method="post" action="{% url 'deployments:browse_files' app.pk %}" class="stack" data-files-form style="margin-top: 14px;">
-        {% csrf_token %}
-        <div class="field" style="max-width: 340px;">
+      <form method="post" action="{% url 'deployments:browse_files' app.pk %}" class="stack" data-files-form>
+        <div class="field pl-form-field pl-field-narrow">
           <label for="files-task">Select Replica</label>
           <select class="input" name="task" id="files-task">
             {% for task, node in rows %}
@@ -30,20 +22,20 @@
             {% endfor %}
           </select>
         </div>
-        <div class="field">
+        <div class="field pl-form-field">
           <label for="files-path">Directory path</label>
           <div class="actions">
             <input class="input mono files-path" name="path" id="files-path" value="/" maxlength="1024" required>
-            <button class="btn" type="button" data-files-up>Up</button>
-            <button class="btn btn-primary" type="submit">Open directory</button>
+            <c-button type="button" data-files-up>Up</c-button>
+            <c-button type="submit" variant="primary">Open directory</c-button>
           </div>
         </div>
-        <p class="muted" role="status" data-files-status style="font-size: 12.5px;">Read-only. Choose a directory or select a file to view a text preview.</p>
-        <ul class="stack files-list" data-files-list style="margin-top: 10px;"></ul>
+        <p class="muted pl-form-hint" role="status" data-files-status>Read-only. Choose a directory or select a file to view a text preview.</p>
+        <ul class="stack files-list" data-files-list></ul>
         <pre class="log" aria-label="File preview" tabindex="0" data-files-preview hidden></pre>
       </form>
       <script src="{% static 'js/container-files.js' %}" defer></script>
     {% endif %}
-  </section>
+  </c-card>
 </div>
 {% endblock %}

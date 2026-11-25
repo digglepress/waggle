@@ -2,7 +2,7 @@
 {% block title %}{{ heading }} · {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="waggle-page">
+<div class="waggle-page pl-page">
   {% if app %}
     {% include "deployments/app_header.html" with active_tab="edit" %}
   {% else %}
@@ -13,54 +13,39 @@
         {% include "deployments/breadcrumb.html" with project=project %}
       {% endif %}
     </div>
-    <header class="board-header">
-      <div class="board-title-group">
-        <h1 class="board-title">{{ heading }}</h1>
-        {% if kind %}
-          <p class="muted">Deploy containerized workloads directly onto your Swarm cluster.</p>
-        {% endif %}
-      </div>
-    </header>
+    <c-page-header title="{{ heading }}" subtitle="Deploy containerized workloads directly onto your Swarm cluster." />
   {% endif %}
 
   {% if needs_build_registry %}
-    <div class="alert alert-warning" style="margin-bottom: 20px;">
-      You can save this service now. Set <code>WAGGLE_REGISTRY_HOST</code> before deploying it.
-    </div>
+    <c-alert tone="warning" class="pl-alert--spaced">You can save this service now. Set <code>WAGGLE_REGISTRY_HOST</code> before deploying it.</c-alert>
   {% endif %}
 
-  <section class="card">
-    <div class="card-head">
-      <h2>Service Configuration</h2>
-      {% if kind and not app %}
+  <c-card title="Service Configuration">
+    {% if kind and not app %}
+      <c-slot name="actions">
         <a class="link" href="{% url 'deployments:new_connection' kind %}{% if not app %}?environment={{ scope.pk }}{% endif %}">
           + Add source connection
         </a>
-      {% endif %}
-    </div>
+      </c-slot>
+    {% endif %}
 
-    <form method="post" class="stack" style="margin-top: 14px;">
+    <form method="post" class="stack">
       {% csrf_token %}
       {{ form.non_field_errors }}
       <div class="grid-2">
         {% for field in form %}
-          <div class="field {% if field.name == 'command' or field.name == 'image' or field.name == 'repository' %}span-2{% endif %}">
-            {{ field.label_tag }}
-            {{ field }}
-            {{ field.errors }}
-            {% if field.help_text %}<p class="hint">{{ field.help_text }}</p>{% endif %}
-          </div>
+          <c-field :field="field" :span="field.name == 'command' or field.name == 'image' or field.name == 'repository'" />
         {% endfor %}
       </div>
-      <div class="actions" style="margin-top: 10px;">
-        <button class="btn btn-primary" type="submit">Save service</button>
+      <c-form-actions>
+        <c-button type="submit" variant="primary">Save service</c-button>
         {% if app %}
-          <a class="btn" href="{% url 'deployments:detail' app.pk %}">Cancel</a>
+          <c-button href="{% url 'deployments:detail' app.pk %}" variant="secondary">Cancel</c-button>
         {% elif scope %}
-          <a class="btn" href="{% url 'deployments:environment' scope.pk %}">Cancel</a>
+          <c-button href="{% url 'deployments:environment' scope.pk %}" variant="secondary">Cancel</c-button>
         {% endif %}
-      </div>
+      </c-form-actions>
     </form>
-  </section>
+  </c-card>
 </div>
 {% endblock %}

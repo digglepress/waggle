@@ -2,53 +2,49 @@
 {% block title %}{{ app.slug }} · {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="waggle-page">
+<div class="waggle-page pl-page">
   {% include "deployments/app_header.html" with active_tab="detail" %}
 
   <div class="coolify-grid-2">
-    <section class="card">
-      <div class="card-head">
-        <h2>Swarm Service Status</h2>
+    <c-card title="Swarm Service Status">
+      <c-slot name="actions">
         {% if service %}
-          <span class="badge badge-ok">{{ service.replicas_running }}/{{ service.replicas_desired }} running</span>
+          <c-badge tone="ok">{{ service.replicas_running }}/{{ service.replicas_desired }} running</c-badge>
         {% else %}
-          <span class="badge badge-warn">Not deployed</span>
+          <c-badge tone="warn">Not deployed</c-badge>
         {% endif %}
-      </div>
+      </c-slot>
 
       {% if service %}
         <p class="muted">Live replicas running on Docker Swarm:</p>
-        <div class="stat-value" style="font-size: 24px; margin: 8px 0 14px;">
+        <div class="stat-value pl-detail-stat">
           {{ service.replicas_running }} <small>/ {{ service.replicas_desired }} Replicas</small>
         </div>
         {% if service.update_state %}
-          <p class="muted" style="margin-bottom: 16px;">Update state: <strong>{{ service.update_state }}</strong></p>
+          <p class="muted pl-detail-note">Update state: <strong>{{ service.update_state }}</strong></p>
         {% endif %}
 
         {% if user.is_staff %}
-          <div class="actions" style="margin-top: 14px;">
-            <a class="btn" href="{% url 'deployments:logs' app.pk %}">Runtime logs</a>
-            <a class="btn" href="{% url 'deployments:tasks' app.pk %}">Containers</a>
-            <form method="post" action="{% url 'deployments:rollback' app.pk %}" style="margin: 0;">
+          <c-toolbar class="pl-detail-actions">
+            <c-button href="{% url 'deployments:logs' app.pk %}">Runtime logs</c-button>
+            <c-button href="{% url 'deployments:tasks' app.pk %}">Containers</c-button>
+            <form method="post" action="{% url 'deployments:rollback' app.pk %}">
               {% csrf_token %}
-              <button class="btn btn-danger" type="submit">Roll back to previous spec</button>
+              <c-button type="submit" variant="danger">Roll back to previous spec</c-button>
             </form>
-          </div>
+          </c-toolbar>
         {% endif %}
       {% elif cluster_error %}
         <p class="error">{{ cluster_error }}</p>
       {% else %}
         <p class="muted">No service observed on Swarm. Click <strong>Deploy</strong> above to start this application.</p>
       {% endif %}
-    </section>
+    </c-card>
 
-    <section class="card">
-      <div class="card-head">
-        <h2>Domains & Routing</h2>
-        {% if user.is_staff %}
-          <a class="link" href="{% url 'deployments:domains' app.pk %}">Manage domains</a>
-        {% endif %}
-      </div>
+    <c-card title="Domains & Routing">
+      {% if user.is_staff %}
+        <c-slot name="actions"><a class="link" href="{% url 'deployments:domains' app.pk %}">Manage domains</a></c-slot>
+      {% endif %}
       {% if hostnames %}
         <div class="domain-chips-list">
           {% for hostname in hostnames %}
@@ -64,38 +60,25 @@
       {% else %}
         <p class="muted">No custom domains configured. The service runs internally on port {{ app.port }}.</p>
         {% if user.is_staff %}
-          <a class="btn btn-sm" href="{% url 'deployments:domains' app.pk %}" style="margin-top: 10px;">Add domain</a>
+          <c-button href="{% url 'deployments:domains' app.pk %}" size="sm" class="pl-detail-add">Add domain</c-button>
         {% endif %}
       {% endif %}
-    </section>
+    </c-card>
   </div>
 
   {% if user.is_staff %}
-    <section class="card">
-      <div class="card-head">
-        <h2>Recent Deployments</h2>
-        <a class="link" href="{% url 'deployments:history' app.pk %}">Deployment history →</a>
-      </div>
+    <c-card title="Recent Deployments">
+      <c-slot name="actions"><a class="link" href="{% url 'deployments:history' app.pk %}">Deployment history →</a></c-slot>
       <div class="deployment-jobs-list">
         {% for job in jobs %}
-          <div class="job-list-row">
-            <div class="job-meta-left">
-              <a class="job-pk-link" href="{% url 'deployments:job' app.pk job.pk %}">#{{ job.pk }}</a>
-              <span class="job-op-badge">{{ job.get_operation_display }}</span>
-              <span class="badge badge-{% if job.state == 'applied' %}ok{% elif job.state == 'failed' %}bad{% else %}info{% endif %}">
-                {{ job.get_state_display }}
-              </span>
-            </div>
-            <div class="job-meta-right">
-              <span class="muted" style="font-size: 12px;">{{ job.created_at|date:"M d, H:i" }}</span>
-              <a class="btn btn-sm" href="{% url 'deployments:job' app.pk job.pk %}">View log</a>
-            </div>
-          </div>
+          <c-job-row :job="job" app_pk="{{ app.pk }}">
+            <c-slot name="meta"><span class="muted pl-filter-note">{{ job.created_at|date:"M d, H:i" }}</span></c-slot>
+          </c-job-row>
         {% empty %}
           <p class="muted">No deployments yet.</p>
         {% endfor %}
       </div>
-    </section>
+    </c-card>
   {% endif %}
 </div>
 {% endblock %}

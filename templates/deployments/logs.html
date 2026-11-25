@@ -2,30 +2,20 @@
 {% load static %}
 {% block title %}{{ app.slug }} · Runtime Logs{% endblock %}
 {% block content %}
-<div class="waggle-page">
+<div class="waggle-page pl-page">
   {% include "deployments/app_header.html" with active_tab="logs" %}
 
-  <section class="card">
-    <div class="card-head">
-      <div>
-        <h2>Live Runtime Logs</h2>
-        <p class="muted" data-log-status>Connecting to swarm log stream…</p>
-      </div>
-      <div class="actions">
-        <a class="btn btn-sm" href="{% url 'deployments:detail' app.pk %}">Overview</a>
-      </div>
-    </div>
+  <c-card title="Live Runtime Logs">
+    <c-slot name="actions"><p class="muted" data-log-status>Connecting to swarm log stream…</p></c-slot>
 
     {% if error %}
-      <div class="alert alert-error" style="margin-top: 14px;">{{ error }}</div>
+      <c-alert tone="error" class="pl-alert--spaced">{{ error }}</c-alert>
     {% endif %}
 
     {% if not error %}
-      <div style="margin-top: 14px;">
-        <pre class="log" data-deduplicate="true" data-log-stream="{% url 'deployments:runtime_stream' app.pk %}">{{ output }}</pre>
-      </div>
+      <pre class="log" data-deduplicate="true" data-log-stream="{% url 'deployments:runtime_stream' app.pk %}">{{ output }}</pre>
       <script src="{% static 'js/service-log-stream.js' %}" defer></script>
     {% endif %}
-  </section>
+  </c-card>
 </div>
 {% endblock %}

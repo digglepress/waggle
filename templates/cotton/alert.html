@@ -1,0 +1,5 @@
+<c-vars tone="info" title="" class="" />
+{% comment %}Adapted from https://preline.co/docs/alert.html and https://preline.co/blocks/feedback-states/empty-states/{% endcomment %}
+<div class="alert alert-{{ tone }} pl-alert pl-alert--{{ tone }} {{ class }}" role="{% if tone == 'error' or tone == 'danger' %}alert{% else %}status{% endif %}">
+  {% if title %}<strong>{{ title }}</strong> {% endif %}{{ slot }}
+</div>

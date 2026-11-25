@@ -1,0 +1,14 @@
+<c-vars :job="None" app_pk="" pk_label="" label="View log" class="" />
+{% comment %}Adapted from https://preline.co/blocks/data-display/admin-utility-tables/#team-management-table{% endcomment %}
+<div class="job-list-row pl-job-row {{ class }}">
+  <div class="job-meta-left">
+    <a class="job-pk-link" href="{% url 'deployments:job' app_pk job.pk %}">{% if pk_label %}{{ pk_label }}{% else %}#{{ job.pk }}{% endif %}</a>
+    <span class="job-op-badge pl-chip">{{ job.get_operation_display }}</span>
+    <span class="badge badge-{% if job.state == 'applied' %}ok{% elif job.state == 'failed' %}bad{% else %}info{% endif %} pl-badge">{{ job.get_state_display }}</span>
+    {{ meta }}
+  </div>
+  <div class="job-meta-right">
+    {{ actions }}
+    <a class="btn btn-sm pl-btn" href="{% url 'deployments:job' app_pk job.pk %}">{{ label }}</a>
+  </div>
+</div>

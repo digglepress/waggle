@@ -1,0 +1,15 @@
+<c-vars title="" subtitle="" class="" />
+{% comment %}Adapted from https://preline.co/blocks/navigation-layout/dashboard-headers/{% endcomment %}
+{% if crumbs %}<div class="top-breadcrumb-row">{{ crumbs }}</div>{% endif %}
+<header class="board-header pl-page-header {{ class }}">
+  <div class="board-title-group">
+    <h1 class="board-title">{{ title }}</h1>
+    {% if subtitle %}<p class="muted">{{ subtitle }}</p>{% endif %}
+    {{ head }}
+  </div>
+  {% if actions %}
+    <div class="board-toolbar">
+      <div class="toolbar-actions pl-toolbar">{{ actions }}</div>
+    </div>
+  {% endif %}
+</header>

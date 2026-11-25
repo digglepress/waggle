@@ -3,45 +3,29 @@
 {% block title %}Servers · {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="waggle-page">
+<div class="waggle-page pl-page">
   <div class="top-breadcrumb-row">
-    <div class="breadcrumb-nav" aria-label="Breadcrumb">
-      <span class="breadcrumb-icon" aria-hidden="true">
+    <c-breadcrumb :items="[{'label': 'Infrastructure'}, {'label': 'Servers'}]">
+      <c-slot name="icon">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/></svg>
-      </span>
-      <span class="breadcrumb-sep">›</span>
-      <span class="breadcrumb-link">Infrastructure</span>
-      <span class="breadcrumb-sep">›</span>
-      <span class="breadcrumb-pill">Servers</span>
-    </div>
+      </c-slot>
+    </c-breadcrumb>
   </div>
 
-  <header class="board-header">
-    <div class="board-title-group">
-      <h1 class="board-title">Servers</h1>
-      <p class="muted">Infrastructure hosts and Docker Swarm nodes powering your applications.</p>
-    </div>
-    <div class="board-toolbar">
-      <div class="toolbar-actions">
-        <a class="btn-import" href="{% url 'servers:keys' %}">
-          <span>Manage SSH keys</span>
-        </a>
-        <a class="btn-new-board" href="{% url 'servers:add' %}">
-          <span>+ Add server</span>
-        </a>
-      </div>
-    </div>
-  </header>
+  <c-page-header title="Servers" subtitle="Infrastructure hosts and Docker Swarm nodes powering your applications.">
+    <c-slot name="actions">
+      <c-button href="{% url 'servers:keys' %}" variant="import"><span>Manage SSH keys</span></c-button>
+      <c-button href="{% url 'servers:add' %}" variant="new"><span>+ Add server</span></c-button>
+    </c-slot>
+  </c-page-header>
 
   {% if not cluster.ok %}
-    <div class="alert alert-error" style="margin-bottom: 20px;">
-      <strong>Cluster unavailable.</strong> {{ cluster.message }}
-    </div>
+    <c-alert tone="error" title="Cluster unavailable." class="pl-alert--spaced">{{ cluster.message }}</c-alert>
   {% endif %}
 
   <div class="projects-cards-grid">
     {% for server in servers %}
-      <article class="task-card server-card">
+      <c-task-card>
         <div class="card-meta">
           <span class="client-name">{{ server.get_role_display|upper }} NODE</span>
         </div>
@@ -59,11 +43,11 @@
         </p>
 
         <div class="card-assignee-tags" style="margin-top: 6px;">
-          <span class="badge badge-{{ server.status_tone }}">{{ server.get_status_display }}</span>
+          <c-badge tone="{{ server.status_tone }}">{{ server.get_status_display }}</c-badge>
           <span class="muted" style="font-size: 11.5px;">{{ server.get_availability_display }}</span>
         </div>
 
-        <div style="font-size: 12px; color: var(--muted); padding: 8px 10px; background: var(--surface-2); border-radius: 8px; margin-top: 4px;">
+        <div class="pl-card-note">
           {% if server.cpu_cores %}{{ server.cpu_cores }} vCPU · {% endif %}{{ server.ram_display }}
           {% if server.docker_version %} · Docker {{ server.docker_version }}{% endif %}
         </div>
@@ -73,19 +57,17 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
             <span>Node</span>
           </span>
-          <a class="card-due" href="{{ server.get_absolute_url }}" style="text-decoration: none;">
+          <a class="card-due" href="{{ server.get_absolute_url }}">
             <span>Configure →</span>
           </a>
         </div>
-      </article>
+      </c-task-card>
     {% empty %}
-      <div class="empty-state-card span-all">
-        <p class="muted">No servers registered yet.</p>
-        <p class="muted" style="font-size: 12px;">Add a worker node by connecting via SSH to expand your Swarm cluster.</p>
-        <a class="btn-new-board" href="{% url 'servers:add' %}" style="margin-top: 12px; display: inline-flex;">
-          <span>+ Add server</span>
-        </a>
-      </div>
+      <c-empty-state class="span-all" title="No servers registered yet." message="Add a worker node by connecting via SSH to expand your Swarm cluster.">
+        <c-slot name="action">
+          <c-button href="{% url 'servers:add' %}" variant="new" class="pl-empty-action"><span>+ Add server</span></c-button>
+        </c-slot>
+      </c-empty-state>
     {% endfor %}
   </div>
 </div>

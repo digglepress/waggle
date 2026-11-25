@@ -1,15 +1,17 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-<header class="page-head">
-  <div><h1>{{ job.application.slug }} · {{ job.get_operation_display }} #{{ job.pk }}</h1><p data-job-state>{{ job.get_state_display }}</p></div>
-  <a class="btn" href="{% url 'deployments:detail' job.application_id %}">Application</a>
-</header>
-{% if job.error %}<p class="alert alert-error">{{ job.error }}</p>{% endif %}
+<c-page-header title="{{ job.application.slug }} · {{ job.get_operation_display }} #{{ job.pk }}">
+  <c-slot name="head"><p data-job-state>{{ job.get_state_display }}</p></c-slot>
+  <c-slot name="actions">
+    <c-button href="{% url 'deployments:detail' job.application_id %}">Application</c-button>
+  </c-slot>
+</c-page-header>
+{% if job.error %}<c-alert tone="error">{{ job.error }}</c-alert>{% endif %}
 {% if job.image %}<p class="mono">{{ job.image }}</p>{% endif %}
-<section class="card">
-  <div class="card-head"><h2>Deployment log</h2><span class="muted" data-log-status>{{ job.get_state_display }}</span></div>
+<c-card title="Deployment log">
+  <c-slot name="actions"><span class="muted" data-log-status>{{ job.get_state_display }}</span></c-slot>
   <pre class="log" data-log-stream="{% url 'deployments:deployment_stream' job.application_id job.pk %}">{{ output }}</pre>
-</section>
+</c-card>
 <script src="{% static 'js/service-log-stream.js' %}" defer></script>
 {% endblock %}

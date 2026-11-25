@@ -1,13 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Audit log · {{ app_name }}{% endblock %}
 {% block content %}
-<header class="page-head">
-  <div><h1>Audit log</h1><p class="muted">Security-relevant operator actions, newest first.</p></div>
-</header>
-<section class="card">
+<c-page-header title="Audit log" subtitle="Security-relevant operator actions, newest first." />
+<c-card>
   {% if page.object_list %}
-    <div class="table-wrap">
-      <table>
+    <c-table :scroll="False">
+      <table class="table">
         <thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th><th>Source</th></tr></thead>
         <tbody>
           {% for event in page.object_list %}
@@ -21,16 +19,10 @@
           {% endfor %}
         </tbody>
       </table>
-    </div>
+    </c-table>
   {% else %}
-    <p class="muted">No audit events yet.</p>
+    <c-empty-state title="No audit events yet." />
   {% endif %}
-  {% if page.has_other_pages %}
-    <nav class="actions" aria-label="Audit pagination">
-      {% if page.has_previous %}<a class="btn" href="?page={{ page.previous_page_number }}">Previous</a>{% endif %}
-      <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
-      {% if page.has_next %}<a class="btn" href="?page={{ page.next_page_number }}">Next</a>{% endif %}
-    </nav>
-  {% endif %}
-</section>
+  <c-pagination :page="page" label="Audit" />
+</c-card>
 {% endblock %}

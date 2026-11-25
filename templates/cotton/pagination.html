@@ -1,0 +1,9 @@
+<c-vars :page="None" label="Pagination" class="" />
+{% comment %}Adapted from https://preline.co/blocks/navigation-layout/pagination/{% endcomment %}
+{% if page and page.paginator.num_pages > 1 %}
+<nav class="actions pl-pagination {{ class }}" aria-label="{{ label }}">
+  {% if page.has_previous %}<a class="btn pl-btn" href="?page={{ page.previous_page_number }}">Previous</a>{% endif %}
+  <span class="muted pl-pagination-info">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a class="btn pl-btn" href="?page={{ page.next_page_number }}">Next</a>{% endif %}
+</nav>
+{% endif %}

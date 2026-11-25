@@ -1,35 +1,25 @@
 {% extends "base.html" %}
 {% block title %}{{ app.slug }} · Domains{% endblock %}
 {% block content %}
-<div class="waggle-page">
+<div class="waggle-page pl-page">
   {% include "deployments/app_header.html" with active_tab="domains" %}
 
   <div class="coolify-grid-2">
-    <section class="card">
-      <div class="card-head">
-        <h2>Routing Hostnames</h2>
-      </div>
+    <c-card title="Routing Hostnames">
       <p class="muted">Enter one hostname per line. Each hostname routes to container port <code>{{ app.port }}</code>. Point its DNS at your Traefik entrypoint.</p>
       <form method="post" class="stack">
         {% csrf_token %}
-        <div class="field">
-          {{ form.hostnames.label_tag }}
-          {{ form.hostnames.errors }}
-          {{ form.hostnames }}
-        </div>
-        <div class="actions">
-          <button class="btn btn-primary" type="submit">Save domains</button>
-        </div>
+        <c-field :field="form.hostnames" />
+        <c-form-actions>
+          <c-button type="submit" variant="primary">Save domains</c-button>
+        </c-form-actions>
       </form>
       {% if has_pending %}
-        <p class="alert alert-info" style="margin-top: 14px;">Saved domains differ from the live routes. Deploy the service to apply them.</p>
+        <c-alert tone="info" class="pl-alert--spaced">Saved domains differ from the live routes. Deploy the service to apply them.</c-alert>
       {% endif %}
-    </section>
+    </c-card>
 
-    <section class="card">
-      <div class="card-head">
-        <h2>Live Swarm Routes</h2>
-      </div>
+    <c-card title="Live Swarm Routes">
       {% if active is None %}
         <p class="muted">Swarm routing status is unavailable.</p>
       {% else %}
@@ -47,16 +37,16 @@
         </div>
       {% endif %}
 
-      <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border-soft);">
+      <div class="pl-card-note pl-note-block">
         {% if route_tls and cert_resolver %}
-          <p class="muted" style="font-size: 12.5px;">TLS resolver: <code>{{ cert_resolver }}</code>. Public DNS and reachable Traefik ports are required for issuance.</p>
+          <p class="muted">TLS resolver: <code>{{ cert_resolver }}</code>. Public DNS and reachable Traefik ports are required for issuance.</p>
         {% elif route_tls %}
-          <p class="muted" style="font-size: 12.5px;">HTTPS enabled. No automatic certificate resolver is configured.</p>
+          <p class="muted">HTTPS enabled. No automatic certificate resolver is configured.</p>
         {% else %}
-          <p class="muted" style="font-size: 12.5px;">HTTPS is not enabled. Configure TLS and the Let’s Encrypt resolver in your Traefik deployment.</p>
+          <p class="muted">HTTPS is not enabled. Configure TLS and the Let’s Encrypt resolver in your Traefik deployment.</p>
         {% endif %}
       </div>
-    </section>
+    </c-card>
   </div>
 </div>
 {% endblock %}

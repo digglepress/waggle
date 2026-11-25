@@ -4,32 +4,32 @@
 {% block title %}Sign in · {{ app_name }}{% endblock %}
 
 {% block content %}
-<section class="auth" aria-labelledby="auth-title">
+<section class="auth pl-auth" aria-labelledby="auth-title">
   <div class="auth-intro" data-enter>
     <h1 id="auth-title" data-moment="liquid-type" data-moment-opts='{"strength":0.3}'>Docker Swarm control plane</h1>
     <p>Deploy applications, manage servers, and check cluster health in {{ app_name }}.</p>
   </div>
-  <div class="auth-card">
+  <div class="auth-card pl-auth-card">
     <h2>Sign in to {{ app_name }}</h2>
 
     {% if form.errors %}
-      <div class="alert alert-error" id="signin-error" role="alert">That username and password did not match.</div>
+      <c-alert tone="error" id="signin-error">That username and password did not match.</c-alert>
     {% endif %}
 
     <form method="post" class="stack">
       {% csrf_token %}
-      <div class="field">
+      <div class="field pl-form-field">
         <label for="{{ form.username.id_for_label }}">Username</label>
         <input class="input" type="text" name="username" id="{{ form.username.id_for_label }}"
                autocomplete="username" required{% if form.errors %} aria-invalid="true" aria-describedby="signin-error"{% endif %}>
       </div>
-      <div class="field">
+      <div class="field pl-form-field">
         <label for="{{ form.password.id_for_label }}">Password</label>
         <input class="input" type="password" name="password" id="{{ form.password.id_for_label }}"
                autocomplete="current-password" required{% if form.errors %} aria-invalid="true" aria-describedby="signin-error"{% endif %}>
       </div>
       <input type="hidden" name="next" value="{{ next }}">
-      <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+      <c-button type="submit" variant="primary" block>Sign in</c-button>
     </form>
   </div>
 </section>

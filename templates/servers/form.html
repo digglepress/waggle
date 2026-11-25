@@ -3,49 +3,36 @@
 {% block title %}Add server · {{ app_name }}{% endblock %}
 
 {% block content %}
-<header class="page-head">
-  <div>
-    <h1>Add a server</h1>
-    <p class="muted">{{ app_name }} will SSH in, install Docker, and join the swarm.</p>
-  </div>
-</header>
+<c-page-header title="Add a server" subtitle="{{ app_name }} will SSH in, install Docker, and join the swarm." />
 
 {% if not has_keys %}
-  <div class="alert alert-warning">
+  <c-alert tone="warning">
     You need an SSH key before adding a server.
     <a class="link" href="{% url 'servers:key_add' %}">Add one now</a>.
-  </div>
+  </c-alert>
 {% endif %}
 
-<section class="card">
+<c-card>
   <form method="post" class="stack">
     {% csrf_token %}
     {% for error in form.non_field_errors %}
-      <div class="alert alert-error">{{ error }}</div>
+      <c-alert tone="error">{{ error }}</c-alert>
     {% endfor %}
 
     <div class="grid-2">
       {% for field in form %}
-        <div class="field {% if field.name == 'labels' %}span-2{% endif %}">
-          <label for="{{ field.id_for_label }}">
-            {{ field.label }}{% if field.field.required %}<span class="req">*</span>{% endif %}
-          </label>
-          {{ field }}
-          {% if field.help_text %}<p class="hint">{{ field.help_text }}</p>{% endif %}
-          {% for error in field.errors %}<p class="error">{{ error }}</p>{% endfor %}
-        </div>
+        <c-field :field="field" :span="field.name == 'labels'" />
       {% endfor %}
     </div>
 
-    <div class="form-actions">
-      <button class="btn btn-primary" type="submit">Add and bootstrap</button>
-      <a class="btn btn-ghost" href="{% url 'servers:list' %}">Cancel</a>
-    </div>
+    <c-form-actions>
+      <c-button type="submit" variant="primary">Add and bootstrap</c-button>
+      <c-button href="{% url 'servers:list' %}" variant="ghost">Cancel</c-button>
+    </c-form-actions>
   </form>
-</section>
+</c-card>
 
-<section class="card subtle">
-  <h2>What happens next</h2>
+<c-card class="subtle" title="What happens next">
   <ol class="steps-plain">
     <li>Connect over SSH and pin the host key.</li>
     <li>Check architecture, memory, disk, cgroups and clock sync.</li>
@@ -55,5 +42,5 @@
     <li>Apply node labels and mark the node ready.</li>
   </ol>
   <p class="hint">The SSH user needs passwordless sudo. {{ app_name }} never stores passwords.</p>
-</section>
+</c-card>
 {% endblock %}

@@ -1,0 +1,8 @@
+<c-vars :field="None" label="" hint="" span=False class="" />
+{% comment %}Adapted from https://preline.co/docs/form-input.html and https://preline.co/blocks/forms/create-and-edit-forms/{% endcomment %}
+<div class="field pl-form-field{% if span %} span-2{% endif %} {{ class }}">
+  {% if label %}<label for="{{ field.id_for_label }}">{{ label }}{% if field.field.required %}<span class="req">*</span>{% endif %}</label>{% else %}{{ field.label_tag }}{% endif %}
+  <div class="pl-form-control">{{ field }}</div>
+  {% if field.errors %}<p class="error pl-error" id="{{ field.id_for_label }}-error">{% for error in field.errors %}{{ error }}{% if not forloop.last %} {% endif %}{% endfor %}</p>{% endif %}
+  {% if hint %}<p class="hint pl-help">{{ hint }}</p>{% elif field.help_text %}<p class="hint pl-help">{{ field.help_text }}</p>{% endif %}
+</div>

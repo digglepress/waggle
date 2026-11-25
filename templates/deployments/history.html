@@ -1,47 +1,32 @@
 {% extends "base.html" %}
 {% block title %}{{ app.slug }} · Deployments{% endblock %}
 {% block content %}
-<div class="waggle-page">
+<div class="waggle-page pl-page">
   {% include "deployments/app_header.html" with active_tab="history" %}
 
-  <section class="card">
-    <div class="card-head">
-      <div>
-        <h2>Deployment History</h2>
-        <p class="muted">Rolling back restores the saved revision and configuration. Prefer image digests for immutable builds.</p>
-      </div>
-    </div>
-
-    <div class="deployment-jobs-list" style="margin-top: 14px;">
+  <c-card title="Deployment History" subtitle="Rolling back restores the saved revision and configuration. Prefer image digests for immutable builds.">
+    <div class="deployment-jobs-list">
       {% for job in page %}
-        <div class="job-list-row">
-          <div class="job-meta-left">
-            <a class="job-pk-link" href="{% url 'deployments:job' app.pk job.pk %}">#{{ job.pk }}</a>
-            <span class="job-op-badge">{{ job.get_operation_display }}</span>
-            <span class="badge badge-{% if job.state == 'applied' %}ok{% elif job.state == 'failed' %}bad{% else %}info{% endif %}">
-              {{ job.get_state_display }}
-            </span>
-            <span class="muted" style="font-size: 12px;">{{ job.created_at|date:"M d, Y H:i:s" }}</span>
-            {% if job.image %}
-              <div class="mono muted" style="font-size: 11.5px; margin-top: 4px;">{{ job.image }}</div>
-            {% endif %}
-          </div>
-          <div class="job-meta-right">
+        <c-job-row :job="job" app_pk="{{ app.pk }}" label="View log">
+          <c-slot name="meta">
+            <span class="muted pl-filter-note">{{ job.created_at|date:"M d, Y H:i:s" }}</span>
+            {% if job.image %}<div class="mono muted pl-filter-note">{{ job.image }}</div>{% endif %}
+          </c-slot>
+          <c-slot name="actions">
             {% if job.state == "submitted" and job.image %}
-              <form method="post" action="{% url 'deployments:rollback_to' app.pk job.pk %}" style="margin: 0;">
+              <form method="post" action="{% url 'deployments:rollback_to' app.pk job.pk %}">
                 {% csrf_token %}
-                <button class="btn btn-sm" type="submit">Roll back to this</button>
+                <c-button type="submit" size="sm">Roll back to this</c-button>
               </form>
             {% endif %}
-            <a class="btn btn-sm btn-primary" href="{% url 'deployments:job' app.pk job.pk %}">View log</a>
-          </div>
-        </div>
+          </c-slot>
+        </c-job-row>
       {% empty %}
         <p class="muted">No deployment history yet.</p>
       {% endfor %}
     </div>
 
     {% include "deployments/pagination.html" %}
-  </section>
+  </c-card>
 </div>
 {% endblock %}

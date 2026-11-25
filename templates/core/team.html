@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<header class="page-head"><div><h1>Team</h1><p class="muted">Manage access to this {{ app_name }} instance.</p></div></header>
+<c-page-header title="Team" subtitle="Manage access to this {{ app_name }} instance." />
 {% if password %}
-  <p class="alert alert-warning">Setup password (shown once): <code>{{ password }}</code>. Share it securely and ask the member to change it after signing in.</p>
+  <c-alert tone="warning">Setup password (shown once): <code>{{ password }}</code>. Share it securely and ask the member to change it after signing in.</c-alert>
 {% endif %}
-<section class="card">
+<c-card>
   {% for member in members %}
     <div class="card-head">
       <div><strong>{{ member.username }}</strong> · {% if member.is_superuser %}Owner{% elif member.is_staff %}Operator{% else %}Viewer{% endif %}
@@ -12,18 +12,18 @@
       {% if not member.is_superuser %}
         <form method="post" action="{% url 'core:team_member' member.pk %}" class="actions">
           {% csrf_token %}
-          {% if member.is_staff %}<button class="btn" name="action" value="viewer">Make viewer</button>
-          {% else %}<button class="btn" name="action" value="operator">Make operator</button>{% endif %}
-          {% if member.is_active %}<button class="btn" name="action" value="disable">Disable</button>
-          {% else %}<button class="btn" name="action" value="enable">Enable</button>{% endif %}
+          {% if member.is_staff %}<c-button name="action" value="viewer">Make viewer</c-button>
+          {% else %}<c-button name="action" value="operator">Make operator</c-button>{% endif %}
+          {% if member.is_active %}<c-button name="action" value="disable">Disable</c-button>
+          {% else %}<c-button name="action" value="enable">Enable</c-button>{% endif %}
         </form>
       {% endif %}
     </div>
   {% endfor %}
-</section>
-<section class="card"><h2>Add team member</h2>
+</c-card>
+<c-card title="Add team member">
   <form method="post" class="stack">{% csrf_token %}{{ form.as_p }}
-    <button class="btn btn-primary" type="submit">Create account</button>
+    <c-button type="submit" variant="primary">Create account</c-button>
   </form>
-</section>
+</c-card>
 {% endblock %}

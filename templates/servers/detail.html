@@ -4,30 +4,31 @@
 {% block title %}{{ server.name }} · {{ app_name }}{% endblock %}
 
 {% block content %}
-<header class="page-head">
-  <div>
+<c-page-header title="{{ server.name }}">
+  <c-slot name="crumbs">
     <p class="crumbs"><a class="link" href="{% url 'servers:list' %}">Servers</a> /</p>
-    <h1>{{ server.name }}</h1>
+  </c-slot>
+  <c-slot name="head">
     <p class="muted">
-      <span class="badge badge-{{ server.status_tone }}">{{ server.get_status_display }}</span>
+      <c-badge tone="{{ server.status_tone }}">{{ server.get_status_display }}</c-badge>
       <span class="mono">{{ server.address }}{% if server.ssh_port != 22 %}:{{ server.ssh_port }}{% endif %}</span>
       {% if server.is_local %}<span class="tag">control plane</span>{% endif %}
     </p>
-  </div>
-  <div class="actions">
+  </c-slot>
+  <c-slot name="actions">
     <form method="post" action="{% url 'servers:action' server.pk %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="refresh">
-      <button class="btn btn-ghost" type="submit">Refresh</button>
+      <c-button type="submit" variant="ghost">Refresh</c-button>
     </form>
 
     {% if server.can_bootstrap and not is_busy %}
       <form method="post" action="{% url 'servers:action' server.pk %}">
         {% csrf_token %}
         <input type="hidden" name="action" value="bootstrap">
-        <button class="btn btn-primary" type="submit">
+        <c-button type="submit" variant="primary">
           {% if server.status == 'error' %}Retry bootstrap{% else %}Re-run bootstrap{% endif %}
-        </button>
+        </c-button>
       </form>
     {% endif %}
 
@@ -35,13 +36,13 @@
       <form method="post" action="{% url 'servers:action' server.pk %}">
         {% csrf_token %}
         <input type="hidden" name="action" value="drain">
-        <button class="btn btn-ghost" type="submit">Drain</button>
+        <c-button type="submit" variant="ghost">Drain</c-button>
       </form>
     {% elif server.availability == 'drain' %}
       <form method="post" action="{% url 'servers:action' server.pk %}">
         {% csrf_token %}
         <input type="hidden" name="action" value="activate">
-        <button class="btn btn-ghost" type="submit">Activate</button>
+        <c-button type="submit" variant="ghost">Activate</c-button>
       </form>
     {% endif %}
 
@@ -50,25 +51,20 @@
             data-confirm="Remove {{ server.name }} from the swarm? Tasks will be rescheduled.">
         {% csrf_token %}
         <input type="hidden" name="action" value="remove">
-        <button class="btn btn-danger" type="submit">Remove</button>
+        <c-button type="submit" variant="danger">Remove</c-button>
       </form>
     {% endif %}
-  </div>
-</header>
+  </c-slot>
+</c-page-header>
 
 {% if server.bootstrap_error %}
-  <div class="alert alert-error"><strong>Bootstrap failed.</strong> {{ server.bootstrap_error }}</div>
+  <c-alert tone="error"><strong>Bootstrap failed.</strong> {{ server.bootstrap_error }}</c-alert>
 {% elif server.last_error and server.status != 'ready' %}
-  <div class="alert alert-warning">{{ server.last_error }}</div>
+  <c-alert tone="warning">{{ server.last_error }}</c-alert>
 {% endif %}
 
 <div class="grid-detail">
-  <section class="card">
-    <div class="card-head">
-      <h2>Bootstrap</h2>
-      <span class="muted">{{ server.step_index }}/{{ server.step_total }} steps</span>
-    </div>
-
+  <c-card title="Bootstrap" subtitle="{{ server.step_index }}/{{ server.step_total }} steps">
     {% if server.is_local %}
       <p class="muted">
         This is the control-plane host. It was installed by <code>deploy/install.sh</code>
@@ -93,11 +89,10 @@
       </div>
       <pre id="bootstrap-log" class="log" data-stream-url="{{ stream_url }}"></pre>
     {% endif %}
-  </section>
+  </c-card>
 
   <div class="stack">
-    <section class="card">
-      <div class="card-head"><h2>Node</h2></div>
+    <c-card title="Node">
       <dl class="meta">
         <div><dt>Role</dt><dd>{{ server.get_role_display }}</dd></div>
         <div><dt>Availability</dt><dd>{{ server.get_availability_display }}</dd></div>
@@ -106,10 +101,9 @@
         <div><dt>Advertise</dt><dd class="mono">{{ server.advertise_addr|default:"—" }}</dd></div>
         <div><dt>Builder</dt><dd>{{ server.is_builder|yesno:"yes,no" }}</dd></div>
       </dl>
-    </section>
+    </c-card>
 
-    <section class="card">
-      <div class="card-head"><h2>Host</h2></div>
+    <c-card title="Host">
       <dl class="meta">
         <div><dt>OS</dt><dd>{{ server.os_name|default:"—" }}</dd></div>
         <div><dt>Arch</dt><dd class="mono">{{ server.arch|default:"—" }}</dd></div>
@@ -119,17 +113,16 @@
         <div><dt>Docker</dt><dd class="mono">{{ server.docker_version|default:"—" }}</dd></div>
         <div><dt>Last seen</dt><dd>{{ server.last_seen|default:"—" }}</dd></div>
       </dl>
-    </section>
+    </c-card>
 
     {% if server.labels %}
-      <section class="card">
-        <div class="card-head"><h2>Labels</h2></div>
+      <c-card title="Labels">
         <dl class="meta">
           {% for key, value in server.labels.items %}
             <div><dt class="mono">{{ key }}</dt><dd class="mono">{{ value }}</dd></div>
           {% endfor %}
         </dl>
-      </section>
+      </c-card>
     {% endif %}
   </div>
 </div>

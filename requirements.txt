@@ -1,4 +1,5 @@
 Django>=5.2,<6.0
+django-cotton>=2.9,<3
 docker>=7.1,<8
 huey>=2.5,<4
 paramiko>=3.5,<6

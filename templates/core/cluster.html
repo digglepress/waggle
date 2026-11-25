@@ -3,79 +3,71 @@
 {% block title %}Cluster · {{ app_name }}{% endblock %}
 
 {% block content %}
-<header class="page-head">
-  <div>
-    <h1>Cluster</h1>
-    <p class="muted">The swarm as Docker reports it. {{ app_name }} never edits this directly.</p>
-  </div>
-</header>
+<c-page-header title="Cluster" subtitle="The swarm as Docker reports it. {{ app_name }} never edits this directly." />
 
 {% if not cluster.ok %}
-  <div class="alert alert-error"><strong>Unavailable.</strong> {{ cluster.message }}</div>
+  <c-alert tone="error"><strong>Unavailable.</strong> {{ cluster.message }}</c-alert>
 {% else %}
-  <section class="card">
-    <div class="card-head"><h2>Swarm</h2></div>
+  <c-card title="Swarm">
     <dl class="meta">
       <div><dt>Cluster ID</dt><dd class="mono">{{ cluster.swarm.cluster_id }}</dd></div>
       <div><dt>Local state</dt><dd>{{ cluster.swarm.local_state }}</dd></div>
       <div><dt>Node address</dt><dd class="mono">{{ cluster.swarm.node_addr }}</dd></div>
       <div><dt>Control available</dt><dd>{{ cluster.swarm.control_available|yesno:"yes,no" }}</dd></div>
     </dl>
-  </section>
+  </c-card>
 
-  <section class="card">
-    <div class="card-head">
-      <h2>Nodes</h2>
-      <span class="muted">{{ cluster.ready_nodes|length }} ready of {{ cluster.nodes|length }}</span>
-    </div>
-    <table class="table">
-      <thead>
-        <tr><th>Host</th><th>Role</th><th>State</th><th>Availability</th><th>Address</th><th>CPU</th><th>Memory</th><th>Engine</th></tr>
-      </thead>
-      <tbody>
-        {% for node in cluster.nodes %}
-          <tr>
-            <td>{{ node.hostname }}{% if node.is_leader %} <span class="tag">leader</span>{% endif %}</td>
-            <td class="muted">{{ node.role }}</td>
-            <td><span class="badge badge-{% if node.is_ready %}ok{% else %}bad{% endif %}">{{ node.state }}</span></td>
-            <td class="muted">{{ node.availability }}</td>
-            <td class="mono muted">{{ node.address }}</td>
-            <td class="muted">{{ node.cpu_cores }}</td>
-            <td class="muted">{{ node.memory_mb }} MB</td>
-            <td class="mono muted">{{ node.docker_version }}</td>
-          </tr>
-        {% empty %}
-          <tr><td colspan="8" class="muted">No nodes reported.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </section>
+  <c-card title="Nodes">
+    <c-slot name="actions"><span class="muted">{{ cluster.ready_nodes|length }} ready of {{ cluster.nodes|length }}</span></c-slot>
+    <c-table>
+      <table class="table">
+        <thead>
+          <tr><th>Host</th><th>Role</th><th>State</th><th>Availability</th><th>Address</th><th>CPU</th><th>Memory</th><th>Engine</th></tr>
+        </thead>
+        <tbody>
+          {% for node in cluster.nodes %}
+            <tr>
+              <td>{{ node.hostname }}{% if node.is_leader %} <span class="tag">leader</span>{% endif %}</td>
+              <td class="muted">{{ node.role }}</td>
+              <td><c-badge tone="{% if node.is_ready %}ok{% else %}bad{% endif %}">{{ node.state }}</c-badge></td>
+              <td class="muted">{{ node.availability }}</td>
+              <td class="mono muted">{{ node.address }}</td>
+              <td class="muted">{{ node.cpu_cores }}</td>
+              <td class="muted">{{ node.memory_mb }} MB</td>
+              <td class="mono muted">{{ node.docker_version }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8" class="muted">No nodes reported.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </c-table>
+  </c-card>
 
-  <section class="card">
-    <div class="card-head">
-      <h2>Services</h2>
-      <span class="muted">Managed by {{ app_name }}</span>
-    </div>
-    <table class="table">
-      <thead><tr><th>Name</th><th>Image</th><th>Mode</th><th>Replicas</th><th>Ports</th></tr></thead>
-      <tbody>
-        {% for service in cluster.services %}
-          <tr>
-            <td class="mono">{{ service.name }}</td>
-            <td class="mono muted">{{ service.image }}</td>
-            <td class="muted">{{ service.mode }}</td>
-            <td>
-              <span class="badge badge-{% if service.is_converged %}ok{% else %}warn{% endif %}">
-                {{ service.replicas_running }}/{{ service.replicas_desired }}
-              </span>
-            </td>
-            <td class="mono muted">{{ service.ports|join:", "|default:"—" }}</td>
-          </tr>
-        {% empty %}
-          <tr><td colspan="5" class="muted">No {{ app_name }} services yet.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </section>
+  <c-card title="Services">
+    <c-slot name="actions"><span class="muted">Managed by {{ app_name }}</span></c-slot>
+    <c-table>
+      <table class="table">
+        <thead><tr><th>Name</th><th>Image</th><th>Mode</th><th>Replicas</th><th>Ports</th></tr></thead>
+        <tbody>
+          {% for service in cluster.services %}
+            <tr>
+              <td class="mono">{{ service.name }}</td>
+              <td class="mono muted">{{ service.image }}</td>
+              <td class="muted">{{ service.mode }}</td>
+              <td>
+                <c-badge tone="{% if service.is_converged %}ok{% else %}warn{% endif %}">
+                  {{ service.replicas_running }}/{{ service.replicas_desired }}
+                </c-badge>
+              </td>
+              <td class="mono muted">{{ service.ports|join:", "|default:"—" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="muted">No {{ app_name }} services yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </c-table>
+  </c-card>
 {% endif %}
 {% endblock %}

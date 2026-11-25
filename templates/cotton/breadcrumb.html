@@ -1,0 +1,9 @@
+<c-vars :items="[]" class="" />
+{% comment %}Adapted from https://preline.co/docs/breadcrumb.html{% endcomment %}
+<nav class="breadcrumb-nav pl-breadcrumb {{ class }}" aria-label="Breadcrumb">
+  {% if icon %}<span class="breadcrumb-icon" aria-hidden="true">{{ icon }}</span>{% endif %}
+  {% for item in items %}
+    {% if not forloop.first %}<span class="breadcrumb-sep" aria-hidden="true">›</span>{% endif %}
+    {% if item.url and not forloop.last %}<a class="breadcrumb-link" href="{{ item.url }}">{{ item.label }}</a>{% elif forloop.last %}<span class="breadcrumb-pill" aria-current="page">{{ item.label }}</span>{% else %}<span class="breadcrumb-link">{{ item.label }}</span>{% endif %}
+  {% endfor %}
+</nav>

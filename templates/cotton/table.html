@@ -1,0 +1,3 @@
+<c-vars class="" scroll=True />
+{% comment %}Adapted from https://preline.co/blocks/data-display/admin-utility-tables/#team-management-table{% endcomment %}
+<div class="{% if scroll %}table-scroll{% else %}table-wrap{% endif %} pl-table-wrap {{ class }}">{{ slot }}</div>

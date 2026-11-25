@@ -1,0 +1,16 @@
+<c-vars title="" subtitle="" class="" />
+{% comment %}Adapted from https://preline.co/blocks/data-display/kpi-cards/ and https://preline.co/blocks/application-pages/admin-dashboard-pages/{% endcomment %}
+<section class="card pl-card {{ class }}">
+  {% if title or head or actions %}
+    <div class="card-head pl-card-head">
+      <div class="pl-card-heading">
+        {% if title %}<h2>{{ title }}</h2>{% endif %}
+        {% if subtitle %}<p class="muted">{{ subtitle }}</p>{% endif %}
+        {{ head }}
+      </div>
+      {% if actions %}<div class="pl-card-actions">{{ actions }}</div>{% endif %}
+    </div>
+  {% endif %}
+  <div class="pl-card-body">{{ slot }}</div>
+  {% if footer %}<div class="pl-card-footer">{{ footer }}</div>{% endif %}
+</section>

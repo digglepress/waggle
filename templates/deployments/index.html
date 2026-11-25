@@ -3,85 +3,108 @@
 {% block title %}Projects · {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="waggle-page">
+<div class="waggle-page pl-page">
   <div class="top-breadcrumb-row">
     {% include "deployments/breadcrumb.html" with project=None scope=None %}
   </div>
 
-  <header class="board-header">
-    <div class="board-title-group">
-      <h1 class="board-title">Projects</h1>
-      <p class="muted">Organize services into projects and environments.</p>
-    </div>
-
-    <div class="board-toolbar">
+  <c-page-header title="Projects" subtitle="Organize services into projects and environments.">
+    <c-slot name="actions">
       <div class="view-tabs" role="tablist">
         <button type="button" class="view-tab active" data-view="cards" role="tab" aria-selected="true">Cards</button>
         <button type="button" class="view-tab" data-view="list" role="tab" aria-selected="false">List</button>
       </div>
-
       <div class="toolbar-divider" aria-hidden="true"></div>
-
       {% if user.is_staff %}
-        <div class="toolbar-actions">
-          <a class="btn-import" href="{% url 'deployments:connections' %}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
-              <path d="M12 12v9"/>
-              <path d="m8 16 4-4 4 4"/>
-            </svg>
+        <c-toolbar>
+          <c-button href="{% url 'deployments:connections' %}" variant="import">
+            <c-slot name="icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
+                <path d="M12 12v9"/>
+                <path d="m8 16 4-4 4 4"/>
+              </svg>
+            </c-slot>
             <span>Source connections</span>
-          </a>
-
-          <a class="btn-new-board" href="{% url 'deployments:new_project' %}">
-            <span>+ New project</span>
-          </a>
-        </div>
+          </c-button>
+          <c-button href="{% url 'deployments:new_project' %}" variant="new"><span>+ New project</span></c-button>
+        </c-toolbar>
       {% endif %}
-    </div>
-  </header>
+    </c-slot>
+  </c-page-header>
 
   {% if tags %}
-    <section class="card tag-filter-card">
-      <div class="tag-filter-bar">
-        <h2 style="font-size: 13px; font-weight: 600; margin: 0 10px 0 0;">Filter services by tag</h2>
-        <div class="tags-filter-list">
-          {% for item in tags %}
-            <a class="badge-tag {% if item.name == tag %}tag-active{% else %}tag-web{% endif %}" href="?tag={{ item.name }}">{{ item.name }}</a>
-          {% endfor %}
-          {% if tag %}<a class="link" href="{% url 'deployments:index' %}" style="font-size: 12px; margin-left: 6px;">Clear filter</a>{% endif %}
+    <section class="card tag-filter-card pl-filter-bar" aria-labelledby="tag-filter-label">
+      <div class="pl-filter-bar-header">
+        <div class="pl-filter-header-left">
+          <span class="pl-filter-badge-icon" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/>
+              <path d="M7 7h.01"/>
+            </svg>
+          </span>
+          <div class="pl-filter-title-wrap">
+            <h2 class="filter-label" id="tag-filter-label">Filter services by tag</h2>
+            <span class="pl-filter-count-chip">{{ tags|length }} tag{% if tags|length != 1 %}s{% endif %}</span>
+          </div>
         </div>
+
+        <div class="pl-filter-search-box">
+          <svg class="pl-filter-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.3-4.3"/>
+          </svg>
+          <input type="text" id="service-search-filter" class="pl-filter-search-input" placeholder="Search services..." aria-label="Search services by keyword">
+        </div>
+      </div>
+
+      <div class="pl-filter-pills-row" role="group" aria-label="Filter services by tag">
+        <a class="pl-tag-pill{% if not tag %} is-active{% endif %}" href="{% url 'deployments:index' %}"{% if not tag %} aria-current="page"{% endif %}>
+          <span>All</span>
+        </a>
+        {% for item in tags %}
+          <a class="pl-tag-pill{% if item.name == tag %} is-active{% endif %}" href="?tag={{ item.name }}"{% if item.name == tag %} aria-current="page"{% endif %}>
+            <span class="pl-tag-hash" aria-hidden="true">#</span>
+            <span>{{ item.name }}</span>
+          </a>
+        {% endfor %}
+        {% if tag %}
+          <a class="pl-tag-clear-pill" href="{% url 'deployments:index' %}" title="Clear tag filter">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            <span>Clear</span>
+          </a>
+        {% endif %}
       </div>
     </section>
   {% endif %}
 
   {% if tag %}
-    <section class="card" style="margin-bottom: 24px;">
-      <div class="card-head">
-        <h2>Services tagged {{ tag }}</h2>
-      </div>
+    <c-card title="Services tagged {{ tag }}">
       <div class="service-list-grid">
         {% for app in matches %}
           <div class="service-item-row">
             <div class="service-info">
               <span class="column-indicator indicator-todo"></span>
               <a class="service-title-link" href="{% url 'deployments:detail' app.pk %}">{{ app.slug }}</a>
-              <span class="muted" style="margin-left: 6px;">({{ app.scope.project.name }} / {{ app.scope.name }})</span>
+              <span class="muted pl-filter-note">({{ app.scope.project.name }} / {{ app.scope.name }})</span>
             </div>
-            <a class="btn btn-sm" href="{% url 'deployments:detail' app.pk %}">Open service</a>
+            <c-button href="{% url 'deployments:detail' app.pk %}" size="sm">Open service</c-button>
           </div>
         {% empty %}
           <p class="muted">No services have this tag.</p>
         {% endfor %}
       </div>
-    </section>
+    </c-card>
   {% endif %}
 
   <!-- CARDS VIEW (matching the reference design cards) -->
   <div id="view-cards" class="view-panel" role="tabpanel">
     <div class="projects-cards-grid">
       {% for project in projects %}
-        <article class="task-card project-card">
+        <c-task-card class="project-card">
           <div class="card-meta">
             <span class="client-name">Project · {{ project.slug }}</span>
           </div>
@@ -93,7 +116,7 @@
               {% for env in project.environments.all %}
                 <span class="badge-tag {% cycle 'tag-web' 'tag-sass' 'tag-mobile' %}">{{ env.name }}</span>
               {% empty %}
-                <span class="muted" style="font-size: 11px;">No environments yet</span>
+                <span class="muted pl-filter-note">No environments yet</span>
               {% endfor %}
             </div>
           </div>
@@ -104,47 +127,45 @@
                 <span>{{ project.environments.count }} env{% if project.environments.count != 1 %}s{% endif %}</span>
               </span>
             </div>
-            <a class="card-due" href="{% url 'deployments:project' project.pk %}" style="text-decoration: none;">
+            <a class="card-due" href="{% url 'deployments:project' project.pk %}">
               <span>Open →</span>
             </a>
           </div>
-        </article>
+        </c-task-card>
       {% empty %}
-        <div class="empty-state-card span-all">
-          <p class="muted">No projects yet. Create a project to get started.</p>
+        <c-empty-state class="span-all" title="No projects yet. Create a project to get started.">
           {% if user.is_staff %}
-            <a class="btn-new-board" href="{% url 'deployments:new_project' %}" style="margin-top: 12px; display: inline-flex;">
-              <span>+ New project</span>
-            </a>
+            <c-slot name="action">
+              <c-button href="{% url 'deployments:new_project' %}" variant="new" class="pl-empty-action"><span>+ New project</span></c-button>
+            </c-slot>
           {% endif %}
-        </div>
+        </c-empty-state>
       {% endfor %}
     </div>
   </div>
 
   <!-- LIST VIEW (matching the reference styling) -->
   <div id="view-list" class="view-panel" role="tabpanel" style="display: none;">
-    <section class="card">
-      <div class="card-head">
-        <h2>Active Projects</h2>
-        {% if user.is_staff %}
-          <a class="btn btn-primary btn-sm" href="{% url 'deployments:new_project' %}">New project</a>
-        {% endif %}
-      </div>
+    <c-card title="Active Projects">
+      {% if user.is_staff %}
+        <c-slot name="actions">
+          <c-button href="{% url 'deployments:new_project' %}" variant="primary" size="sm">New project</c-button>
+        </c-slot>
+      {% endif %}
       <div class="projects-list-items">
         {% for project in projects %}
           <div class="project-list-row">
             <div>
               <a class="project-title-link" href="{% url 'deployments:project' project.pk %}">{{ project.name }}</a>
-              <span class="muted" style="margin-left: 8px;">{{ project.slug }}</span>
+              <span class="muted pl-filter-note">{{ project.slug }}</span>
             </div>
-            <a class="btn btn-sm" href="{% url 'deployments:project' project.pk %}">View environments</a>
+            <c-button href="{% url 'deployments:project' project.pk %}" size="sm">View environments</c-button>
           </div>
         {% empty %}
           <p class="muted">No projects yet. Create a project to get started.</p>
         {% endfor %}
       </div>
-    </section>
+    </c-card>
   </div>
 </div>
 

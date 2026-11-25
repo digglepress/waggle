@@ -2,22 +2,18 @@
 {% load static %}
 {% block title %}{{ app.slug }} · Environment Variables{% endblock %}
 {% block content %}
-<div class="waggle-page">
+<div class="waggle-page pl-page">
   {% include "deployments/app_header.html" with active_tab="variables" %}
 
-  <section class="card">
-    <div class="card-head">
-      <div>
-        <h2>Environment Variables</h2>
-        <p class="muted">Runtime values for this service. Values are literal, not expanded.</p>
-      </div>
+  <c-card title="Environment Variables" subtitle="Runtime values for this service. Values are literal, not expanded.">
+    <c-slot name="actions">
       <div class="view-tabs" role="tablist">
         <a class="view-tab {% if mode == 'form' %}active{% endif %}" href="?mode=form">Form view</a>
         <a class="view-tab {% if mode == 'text' %}active{% endif %}" href="?mode=text">Text / .env view</a>
       </div>
-    </div>
+    </c-slot>
 
-    <form method="post" class="stack" style="margin-top: 14px;">
+    <form method="post" class="stack">
       {% csrf_token %}
       {% if mode == "text" %}
         <p class="hint">One <code>KEY=value</code> per line. Use quotes to preserve spaces and double quotes with <code>\n</code> for multiline values.</p>
@@ -30,14 +26,14 @@
           {% for row in form %}{% include "deployments/variable_row.html" %}{% endfor %}
         </div>
         <template data-variable-template>{% include "deployments/variable_row.html" with row=form.empty_form %}</template>
-        <button type="button" class="btn btn-sm" data-variable-add>+ Add variable row</button>
+        <c-button type="button" size="sm" data-variable-add>+ Add variable row</c-button>
       {% endif %}
-      <div class="actions" style="margin-top: 16px;">
-        <button class="btn btn-primary" type="submit">Save variables</button>
-        <a class="btn" href="{% url 'deployments:detail' app.pk %}">Back to overview</a>
-      </div>
+      <c-form-actions>
+        <c-button type="submit" variant="primary">Save variables</c-button>
+        <c-button href="{% url 'deployments:detail' app.pk %}">Back to overview</c-button>
+      </c-form-actions>
     </form>
-  </section>
+  </c-card>
 </div>
 {% if mode == "form" %}<script src="{% static 'js/variable-rows.js' %}" defer></script>{% endif %}
 {% endblock %}

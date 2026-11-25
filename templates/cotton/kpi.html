@@ -1,0 +1,6 @@
+<c-vars label="" value="" tone="" class="" />
+{% comment %}Adapted from https://preline.co/blocks/data-display/kpi-cards/#simple-kpi-card{% endcomment %}
+<div class="stat pl-kpi {{ class }}">
+  <span class="stat-label">{{ label }}</span>
+  <span class="stat-value{% if tone %} text-{{ tone }}{% endif %}">{{ value }}{{ slot }}</span>
+</div>

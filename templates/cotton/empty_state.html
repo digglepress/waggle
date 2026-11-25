@@ -1,0 +1,8 @@
+<c-vars title="" message="" class="" />
+{% comment %}Adapted from https://preline.co/blocks/feedback-states/empty-states/#invoice-table-empty-state-with-header-and-footer-actions{% endcomment %}
+<div class="empty empty-state-card pl-empty {{ class }}">
+  {% if title %}<p class="pl-empty-title">{{ title }}</p>{% endif %}
+  {% if message %}<p class="muted">{{ message }}</p>{% endif %}
+  {{ slot }}
+  {{ action }}
+</div>

@@ -2,35 +2,22 @@
 {% block title %}Source Connections · {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="waggle-page">
+<div class="waggle-page pl-page">
   <div class="top-breadcrumb-row">
     {% include "deployments/breadcrumb.html" %}
   </div>
 
-  <header class="board-header">
-    <div class="board-title-group">
-      <h1 class="board-title">Source Connections</h1>
-      <p class="muted">Manage authentication for Git providers and private Docker registries.</p>
-    </div>
-    <div class="board-toolbar">
-      <div class="toolbar-actions">
-        <a class="btn-import" href="{% url 'deployments:new_connection' 'git' %}">
-          <span>+ Connect Git provider</span>
-        </a>
-        <a class="btn-new-board" href="{% url 'deployments:new_connection' 'registry' %}">
-          <span>+ Connect Docker registry</span>
-        </a>
-      </div>
-    </div>
-  </header>
+  <c-page-header title="Source Connections" subtitle="Manage authentication for Git providers and private Docker registries.">
+    <c-slot name="actions">
+      <c-button href="{% url 'deployments:new_connection' 'git' %}" variant="import"><span>+ Connect Git provider</span></c-button>
+      <c-button href="{% url 'deployments:new_connection' 'registry' %}" variant="new"><span>+ Connect Docker registry</span></c-button>
+    </c-slot>
+  </c-page-header>
 
-  <section class="card">
-    <div class="card-head">
-      <h2>Configured Providers</h2>
-    </div>
-    <div class="projects-cards-grid" style="margin-top: 14px;">
+  <c-card title="Configured Providers">
+    <div class="projects-cards-grid">
       {% for connection in connections %}
-        <article class="task-card">
+        <c-task-card>
           <div class="card-meta">
             <span class="client-name">{{ connection.get_kind_display }}</span>
           </div>
@@ -41,17 +28,13 @@
             <span class="badge-tag tag-web">{{ connection.get_kind_display }}</span>
           </div>
           <div class="card-footer">
-            <a class="btn btn-sm" href="{% url 'deployments:edit_connection' connection.pk %}" style="width: 100%; justify-content: center;">
-              Edit connection
-            </a>
+            <c-button href="{% url 'deployments:edit_connection' connection.pk %}" size="sm" class="pl-btn-full">Edit connection</c-button>
           </div>
-        </article>
+        </c-task-card>
       {% empty %}
-        <div class="empty-state-card span-all">
-          <p class="muted">No sources connected yet. Connect a Git provider or Docker registry to deploy private images and repositories.</p>
-        </div>
+        <c-empty-state class="span-all" title="No sources connected yet." message="Connect a Git provider or Docker registry to deploy private images and repositories." />
       {% endfor %}
     </div>
-  </section>
+  </c-card>
 </div>
 {% endblock %}

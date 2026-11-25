@@ -74,8 +74,8 @@ class TextVariablesForm(forms.Form):
 
 class VariableForm(forms.Form):
     name = forms.CharField(max_length=200, widget=forms.TextInput(attrs={"class": "input mono"}))
-    value = forms.CharField(required=False, strip=False, max_length=8192, widget=forms.Textarea(
-        attrs={"class": "input mono", "rows": 2},
+    value = forms.CharField(required=False, strip=False, max_length=8192, widget=forms.TextInput(
+        attrs={"class": "input mono"},
     ))
 
 

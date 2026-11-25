@@ -2,37 +2,24 @@
 {% block title %}{{ project.name }} · {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="waggle-page">
+<div class="waggle-page pl-page">
   <div class="top-breadcrumb-row">
     {% include "deployments/breadcrumb.html" with project=project scope=None %}
   </div>
 
-  <header class="board-header">
-    <div class="board-title-group">
-      <h1 class="board-title">{{ project.name }}</h1>
-      <p class="muted">Manage environments and deployed services for this project.</p>
-    </div>
-    <div class="board-toolbar">
-      <div class="toolbar-actions">
-        <a class="btn-import" href="{% url 'deployments:index' %}">
-          <span>← Back to Projects</span>
-        </a>
-        {% if user.is_staff %}
-          <a class="btn-new-board" href="{% url 'deployments:new_environment' project.pk %}">
-            <span>+ New environment</span>
-          </a>
-        {% endif %}
-      </div>
-    </div>
-  </header>
+  <c-page-header title="{{ project.name }}" subtitle="Manage environments and deployed services for this project.">
+    <c-slot name="actions">
+      <c-button href="{% url 'deployments:index' %}" variant="import"><span>← Back to Projects</span></c-button>
+      {% if user.is_staff %}
+        <c-button href="{% url 'deployments:new_environment' project.pk %}" variant="new"><span>+ New environment</span></c-button>
+      {% endif %}
+    </c-slot>
+  </c-page-header>
 
-  <section class="card">
-    <div class="card-head">
-      <h2>Environments</h2>
-    </div>
+  <c-card title="Environments">
     <div class="projects-cards-grid">
       {% for item in project.environments.all %}
-        <article class="task-card">
+        <c-task-card>
           <div class="card-meta">
             <span class="client-name">Environment · {{ item.slug }}</span>
           </div>
@@ -51,22 +38,21 @@
                 <span>Active</span>
               </span>
             </div>
-            <a class="card-due" href="{% url 'deployments:environment' item.pk %}" style="text-decoration: none;">
+            <a class="card-due" href="{% url 'deployments:environment' item.pk %}">
               <span>Open →</span>
             </a>
           </div>
-        </article>
+        </c-task-card>
       {% empty %}
-        <div class="empty-state-card span-all">
-          <p class="muted">Add an environment such as Production or Staging.</p>
+        <c-empty-state class="span-all" title="Add an environment such as Production or Staging.">
           {% if user.is_staff %}
-            <a class="btn-new-board" href="{% url 'deployments:new_environment' project.pk %}" style="margin-top: 12px; display: inline-flex;">
-              <span>+ New environment</span>
-            </a>
+            <c-slot name="action">
+              <c-button href="{% url 'deployments:new_environment' project.pk %}" variant="new" class="pl-empty-action"><span>+ New environment</span></c-button>
+            </c-slot>
           {% endif %}
-        </div>
+        </c-empty-state>
       {% endfor %}
     </div>
-  </section>
+  </c-card>
 </div>
 {% endblock %}

@@ -1,0 +1,7 @@
+<c-vars href="" type="button" variant="secondary" size="" block=False disabled=False name="" value="" class="" />
+{% comment %}Adapted from https://preline.co/docs/buttons.html and https://preline.co/blocks/ui-components/buttons/{% endcomment %}
+{% if href %}
+<a href="{{ href }}" class="{% if variant == 'secondary' %}btn{% elif variant == 'import' %}btn-import{% elif variant == 'new' %}btn-new-board{% elif variant == 'ghost-sm' %}btn-ghost-sm{% else %}btn btn-{{ variant }}{% endif %}{% if size %} btn-{{ size }}{% endif %}{% if block %} btn-block{% endif %} pl-btn pl-btn--{{ variant }} {{ class }}"{% if disabled %} aria-disabled="true"{% endif %} {{ attrs }}>{% if icon %}<span class="btn-icon" aria-hidden="true">{{ icon }}</span>{% endif %}{{ slot }}</a>
+{% else %}
+<button type="{{ type }}" class="{% if variant == 'secondary' %}btn{% elif variant == 'import' %}btn-import{% elif variant == 'new' %}btn-new-board{% elif variant == 'ghost-sm' %}btn-ghost-sm{% else %}btn btn-{{ variant }}{% endif %}{% if size %} btn-{{ size }}{% endif %}{% if block %} btn-block{% endif %} pl-btn pl-btn--{{ variant }} {{ class }}"{% if name %} name="{{ name }}"{% endif %}{% if value != '' %} value="{{ value }}"{% endif %}{% if disabled %} disabled{% endif %} {{ attrs }}>{% if icon %}<span class="btn-icon" aria-hidden="true">{{ icon }}</span>{% endif %}{{ slot }}</button>
+{% endif %}
