@@ -6,6 +6,23 @@ All notable changes to Waggle are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Deployments are pull-aware: while Swarm reports tasks in `preparing`, the
+  rollout keeps waiting instead of treating a slow image pull as a failed
+  rollout. The normal convergence timeout still applies once the pull finishes,
+  and `WAGGLE_DEPLOY_PULL_TIMEOUT` (default 1800s) caps the wait for pulls.
+- Deployment logs now report image-pull and task-startup progress, including
+  the node names and elapsed time, so a slow first pull is visible in the UI.
+- The service overview labels live domain links as **Open** actions.
+
+### Fixed
+
+- Rollouts no longer count tasks that Swarm is shutting down, so an update is
+  not considered converged while only the old task is still running.
+- When a slow pull finishes, the startup phase gets a fresh convergence window
+  instead of being failed because the pull consumed the original timeout.
+
 ## [0.2.0] - 2026-11-23
 
 ### Added

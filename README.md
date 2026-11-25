@@ -251,8 +251,12 @@ image, updates the Swarm service, then waits for the requested number of tasks
 to reach `running`. The deployment page shows **Waiting for tasks** during the
 rollout and ends in **Deployed** only when it converges. A timeout or a failed
 task marks the deployment **Failed**; an update to an existing service is
-rolled back to the previous Swarm spec automatically. The application page
-shows running replicas and the deployment page shows build output and errors.
+rolled back to the previous Swarm spec automatically. A slow first pull is not
+treated as a failure: while Swarm reports tasks in `preparing`, the rollout
+keeps waiting up to `WAGGLE_DEPLOY_PULL_TIMEOUT` (default 1800 seconds) and
+writes pull and task-startup progress to the deployment log. The application
+page shows running replicas and the deployment page shows build output and
+errors.
 The service panel can fetch recent runtime logs and queue a rollback to the
 previous Swarm spec. Rolling back changes the running service, not the saved
 application form. **Deployment history** also rolls back to a specific

@@ -87,6 +87,19 @@ class DomainsAndFilesViewsTests(TestCase):
         self.assertContains(invalid, "Enter DNS hostnames")
         self.assertFalse(self.app.domains.exists())
 
+    def test_overview_opens_the_live_domain_not_pending_configuration(self):
+        self.app.domains.create(hostname="pending.example.org")
+        Deployment.objects.create(application=self.app, state=Deployment.State.SUBMITTED, spec={})
+        live = ServiceInfo("service-id", "api", "nginx", "replicated", 1, 1, labels={
+            "waggle.domains": "live.example.org",
+            "traefik.http.routers.api.tls": "true",
+        })
+        with patch("apps.deployments.views.owned_service", return_value=live):
+            page = self.client.get(reverse("deployments:detail", args=[self.app.pk]))
+        self.assertContains(page, "Open live.example.org")
+        self.assertContains(page, 'href="https://live.example.org"')
+        self.assertNotContains(page, "pending.example.org")
+
     def test_rollback_domains_must_still_be_assigned_and_not_routed_elsewhere(self):
         manager = Mock()
         with self.assertRaisesMessage(DomainError, "Assign api.example.org"):

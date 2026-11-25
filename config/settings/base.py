@@ -212,6 +212,14 @@ SSE_STREAM_SECONDS = env_int("WAGGLE_SSE_STREAM_SECONDS", 600)
 #: How long a deployment may take to reach its desired running task count.
 DEPLOY_CONVERGE_TIMEOUT = env_int("WAGGLE_DEPLOY_CONVERGE_TIMEOUT", 180)
 
+#: A first pull of a large image can take longer than the convergence timeout.
+#: While Swarm reports tasks in ``preparing`` the rollout keeps waiting, up to
+#: this many seconds, instead of treating the pull as a failed rollout.
+DEPLOY_PULL_TIMEOUT = env_int("WAGGLE_DEPLOY_PULL_TIMEOUT", 1800)
+
+#: How often the deployment log receives a pull/startup progress line.
+DEPLOY_PROGRESS_INTERVAL = env_int("WAGGLE_DEPLOY_PROGRESS_INTERVAL", 10)
+
 #: Roll an existing service back to its previous spec when a rollout never
 #: becomes healthy. Disable only if the orchestrator handles this natively.
 DEPLOY_AUTO_ROLLBACK = env_bool("WAGGLE_DEPLOY_AUTO_ROLLBACK", True)

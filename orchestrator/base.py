@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
+from collections import Counter
+from collections.abc import Callable, Iterator
 
 from .errors import OrchestratorError, ServiceNotFound
 from .spec import ServiceSpec
 from .types import (
+    ConvergenceProgress,
     ConvergenceResult,
     NetworkInfo,
     NodeInfo,
@@ -150,24 +152,47 @@ class Orchestrator(ABC):
         *,
         replicas: int | None = None,
         timeout: float = 180.0,
+        pull_timeout: float | None = None,
         poll_interval: float = 1.0,
+        progress_interval: float = 10.0,
+        on_progress: Callable[[ConvergenceProgress], None] | None = None,
     ) -> ConvergenceResult:
         """Poll until the service has the requested number of running tasks.
+
+        A slow image pull must not look like a failed rollout. While tasks are
+        still ``preparing`` (Docker's pull phase) the deadline is extended to
+        ``pull_timeout``; once the pull finishes the normal ``timeout`` applies
+        again. ``on_progress`` receives snapshots on task-state changes and
+        periodically when the state is unchanged.
 
         Returns a result instead of raising so callers can decide whether a
         partial rollout is a failure. ``ConvergenceError`` is reserved for
         "the service vanished", which is always a bug.
         """
         started = time.monotonic()
+        pull_timeout = max(timeout, pull_timeout or timeout)
+        hard_deadline = started + pull_timeout
+        deadline = started + timeout
+        node_names = self._node_names()
+        last_signature: tuple[tuple[str, str], ...] | None = None
+        next_progress = started + min(progress_interval, 5.0)
+        extended = False
+        was_pulling = False
+
         while True:
             service = self.get_service(service_id)
             if service is None:
                 raise ServiceNotFound(f"service {service_id} disappeared during rollout")
-            tasks = self.service_tasks(service_id)
+            tasks = [
+                task for task in self.service_tasks(service_id)
+                if task.desired_state != "shutdown"
+            ]
             running = sum(1 for task in tasks if task.is_running)
             failed = sum(1 for task in tasks if task.is_failed)
             desired = replicas if replicas is not None else service.replicas_desired
             elapsed = time.monotonic() - started
+            pulling = running < desired and any(task.is_pulling for task in tasks)
+            signature = tuple(sorted((task.state, task.message) for task in tasks))
 
             if desired == 0 or running >= desired:
                 return ConvergenceResult(
@@ -187,8 +212,70 @@ class Orchestrator(ABC):
                     elapsed_s=round(elapsed, 2),
                     tasks=tuple(tasks),
                     message=_first_error(tasks) or "all tasks failed",
+                    pulling=pulling,
                 )
-            if elapsed >= timeout:
+
+            now = time.monotonic()
+            changed = last_signature is not None and signature != last_signature
+            if on_progress and (changed or now >= next_progress):
+                on_progress(ConvergenceProgress(
+                    desired=desired,
+                    running=running,
+                    failed=failed,
+                    elapsed_s=round(elapsed, 2),
+                    pulling=pulling,
+                    message=_progress_message(
+                        tasks, desired, running, elapsed, node_names,
+                    ),
+                ))
+                next_progress = now + progress_interval
+            last_signature = signature
+
+            if was_pulling and not pulling:
+                # The image is available now. Start the normal startup window
+                # from here instead of counting the pull against it.
+                deadline = now + timeout
+                extended = False
+                if on_progress:
+                    on_progress(ConvergenceProgress(
+                        desired=desired,
+                        running=running,
+                        failed=failed,
+                        elapsed_s=round(elapsed, 2),
+                        pulling=False,
+                        message="Image pull finished; waiting for the container to start.",
+                    ))
+                    next_progress = now + progress_interval
+
+            if pulling:
+                if now >= hard_deadline:
+                    return ConvergenceResult(
+                        converged=False,
+                        desired=desired,
+                        running=running,
+                        failed=failed,
+                        elapsed_s=round(elapsed, 2),
+                        tasks=tuple(tasks),
+                        message=_failure_message(tasks, desired, running, elapsed, pulling),
+                        pulling=True,
+                    )
+                if now >= deadline and not extended:
+                    extended = True
+                    if on_progress:
+                        on_progress(ConvergenceProgress(
+                            desired=desired,
+                            running=running,
+                            failed=failed,
+                            elapsed_s=round(elapsed, 2),
+                            pulling=True,
+                            message=(
+                                "Image pull is still in progress after "
+                                f"{timeout:.0f}s; waiting up to "
+                                f"{pull_timeout:.0f}s for the rollout."
+                            ),
+                        ))
+                        next_progress = now + progress_interval
+            elif now >= deadline:
                 return ConvergenceResult(
                     converged=False,
                     desired=desired,
@@ -196,10 +283,18 @@ class Orchestrator(ABC):
                     failed=failed,
                     elapsed_s=round(elapsed, 2),
                     tasks=tuple(tasks),
-                    message=_first_error(tasks)
-                    or f"{running}/{desired} tasks running after {timeout:.0f}s",
+                    message=_failure_message(tasks, desired, running, elapsed, pulling),
+                    pulling=False,
                 )
+            was_pulling = pulling
             time.sleep(poll_interval)
+
+    def _node_names(self) -> dict[str, str]:
+        """Best-effort node id to hostname map for progress messages."""
+        try:
+            return {node.id: node.hostname for node in self.list_nodes() if node.hostname}
+        except Exception:  # noqa: BLE001 - progress text must never break a rollout
+            return {}
 
     def close(self) -> None:  # noqa: B027 - optional hook, not every backend holds resources
         """Release backend resources. Safe to call more than once."""
@@ -218,6 +313,55 @@ def _first_error(tasks: list[TaskInfo]) -> str:
         if task.message:
             return task.message
     return ""
+
+
+def _progress_message(
+    tasks: list[TaskInfo],
+    desired: int,
+    running: int,
+    elapsed: float,
+    node_names: dict[str, str],
+) -> str:
+    counts = Counter(task.state for task in tasks)
+    detail = ", ".join(f"{count} {state}" for state, count in sorted(counts.items()))
+    pending_nodes = sorted({
+        node_names.get(task.node_id) or task.node_id[:12] or "unknown"
+        for task in tasks
+        if not task.is_running and not task.is_failed
+    })
+    where = f" on {', '.join(pending_nodes)}" if pending_nodes else ""
+    lead = (
+        "Waiting for image pull and task startup"
+        if any(task.is_pulling for task in tasks)
+        else "Waiting for task startup"
+    )
+    return (
+        f"{lead}: {running}/{desired} running"
+        f" ({detail or 'no tasks yet'}){where}, {elapsed:.0f}s elapsed."
+    )
+
+
+def _failure_message(
+    tasks: list[TaskInfo],
+    desired: int,
+    running: int,
+    elapsed: float,
+    pulling: bool,
+) -> str:
+    error = next((task.error for task in tasks if task.error), "")
+    if error:
+        return error
+    if pulling:
+        return (
+            f"image pull still in progress after {elapsed:.0f}s "
+            f"({running}/{desired} running)"
+        )
+    failed_message = next(
+        (task.message for task in tasks if task.is_failed and task.message), "",
+    )
+    if failed_message:
+        return failed_message
+    return f"{running}/{desired} tasks running after {elapsed:.0f}s"
 
 
 def require(condition: bool, message: str) -> None:

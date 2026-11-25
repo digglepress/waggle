@@ -134,7 +134,7 @@ def make_spec(deployment, image, registry_auth=None):
     )
 
 
-def deploy(deployment, *, resolved_image=None, on_converge=None):
+def deploy(deployment, *, resolved_image=None, on_converge=None, on_progress=None):
     values = deployment.spec
     orchestrator = get_orchestrator()
     try:
@@ -167,14 +167,20 @@ def deploy(deployment, *, resolved_image=None, on_converge=None):
         service_id = orchestrator.create_service(spec)
     if on_converge:
         on_converge()
-    _await_convergence(orchestrator, service_id, spec.replicas, updating=bool(existing))
+    _await_convergence(
+        orchestrator, service_id, spec.replicas, updating=bool(existing),
+        on_progress=on_progress,
+    )
     return image
 
 
-def _await_convergence(orchestrator, service_id, replicas, *, updating):
+def _await_convergence(orchestrator, service_id, replicas, *, updating, on_progress=None):
     """Wait for the rollout to become healthy, rolling back a bad update."""
     result = orchestrator.wait_for_convergence(
         service_id, replicas=replicas, timeout=settings.DEPLOY_CONVERGE_TIMEOUT,
+        pull_timeout=settings.DEPLOY_PULL_TIMEOUT,
+        progress_interval=settings.DEPLOY_PROGRESS_INTERVAL,
+        on_progress=on_progress,
     )
     if result.converged:
         return
@@ -235,7 +241,7 @@ def owned_service(orchestrator, app):
     return service
 
 
-def rollback(app):
+def rollback(app, *, on_progress=None):
     orchestrator = get_orchestrator()
     service = owned_service(orchestrator, app)
     if not service:
@@ -249,6 +255,9 @@ def rollback(app):
     result = orchestrator.wait_for_convergence(
         service.id, replicas=service.replicas_desired,
         timeout=settings.DEPLOY_CONVERGE_TIMEOUT,
+        pull_timeout=settings.DEPLOY_PULL_TIMEOUT,
+        progress_interval=settings.DEPLOY_PROGRESS_INTERVAL,
+        on_progress=on_progress,
     )
     if not result.converged:
         raise DeploymentError(

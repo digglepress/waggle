@@ -6,12 +6,13 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from apps.core.logs import deployment_log_path
 from apps.deployments.forms import ApplicationForm
 from apps.deployments.models import Application, Deployment, Environment, Project, SourceConnection
 from apps.deployments.services import build_image, deploy, make_spec, snapshot
 from apps.deployments.tasks import _run
 from orchestrator.fake import FakeOrchestrator
-from orchestrator.types import ConvergenceResult
+from orchestrator.types import ConvergenceProgress, ConvergenceResult
 
 
 class DeploymentTests(TestCase):
@@ -107,6 +108,31 @@ class DeploymentTests(TestCase):
         self.assertEqual(second.state, Deployment.State.FAILED)
         self.assertIn("Rolled back", second.error)
         self.assertEqual(fake.call_names().count("rollback_service"), 1)
+
+    def test_deployment_log_records_pull_progress(self):
+        FakeOrchestrator.reset()
+        fake = FakeOrchestrator()
+        self.addCleanup(FakeOrchestrator.reset)
+
+        def converge(service_id, **kwargs):
+            kwargs["on_progress"](ConvergenceProgress(
+                desired=1, running=0, failed=0, elapsed_s=42.0, pulling=True,
+                message="Waiting for image pull and task startup: 0/1 running "
+                        "(1 preparing) on worker-1, 42s elapsed.",
+            ))
+            return ConvergenceResult(
+                converged=True, desired=1, running=1, failed=0, elapsed_s=43.0,
+            )
+
+        with patch("apps.deployments.services.get_orchestrator", return_value=fake), \
+                patch.object(fake, "wait_for_convergence", side_effect=converge):
+            job = Deployment.objects.create(application=self.app, spec=snapshot(self.app))
+            _run(job.pk)
+        job.refresh_from_db()
+        self.assertEqual(job.state, Deployment.State.SUBMITTED)
+        output = deployment_log_path(job.pk).read_text(encoding="utf-8")
+        self.assertIn("Waiting for image pull", output)
+        self.assertIn("42s elapsed", output)
 
     def test_runtime_logs_escape_output_and_rollback_targets_owned_service(self):
         FakeOrchestrator.reset()

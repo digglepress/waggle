@@ -30,21 +30,30 @@ def _run(pk):
     job = Deployment.objects.select_related("application").get(pk=pk)
     path = deployment_log_path(pk)
 
+    def write_line(message):
+        try:
+            deployment_line(path, message)
+        except OSError:
+            logger.warning("Could not write deployment log %s", pk)
+
     def mark_converging():
         job.state = state.CONVERGING
         Deployment.objects.filter(pk=pk).update(state=state.CONVERGING, updated_at=timezone.now())
-        try:
-            deployment_line(path, "Waiting for the new tasks to become healthy.")
-        except OSError:
-            logger.warning("Could not write deployment log %s", pk)
+        write_line("Waiting for the new tasks to become healthy.")
+
+    def log_progress(progress):
+        write_line(progress.message)
 
     try:
         deployment_line(path, f"Starting {job.get_operation_display().lower()} for {job.application.slug}.")
         if job.operation == Deployment.Operation.ROLLBACK and not job.image:
-            rollback(job.application)
+            rollback(job.application, on_progress=log_progress)
             job.state = state.SUBMITTED
         else:
-            job.image = deploy(job, resolved_image=job.image or None, on_converge=mark_converging)
+            job.image = deploy(
+                job, resolved_image=job.image or None,
+                on_converge=mark_converging, on_progress=log_progress,
+            )
             job.state = state.SUBMITTED
     except (DeploymentError, OrchestratorError) as exc:
         job.state, job.error = state.FAILED, str(exc)[:2000]

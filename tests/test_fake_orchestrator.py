@@ -1,10 +1,78 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from django.test import SimpleTestCase
 
 from orchestrator.errors import OrchestratorError, OrchestratorUnavailable, ServiceNotFound
 from orchestrator.fake import FakeOrchestrator
 from orchestrator.spec import ServiceSpec
+from orchestrator.types import TaskInfo
+
+
+class PullingOrchestrator(FakeOrchestrator):
+    """Keep tasks in ``preparing`` for a few polls to simulate a slow pull."""
+
+    def __new__(cls, *args, **kwargs):
+        return object.__new__(cls)
+
+    def __init__(self, *, ready_after=8):
+        super().__init__()
+        self.polls = 0
+        self.ready_after = ready_after
+
+    def service_tasks(self, service_id):
+        tasks = super().service_tasks(service_id)
+        self.polls += 1
+        state = "running" if self.polls >= self.ready_after else "preparing"
+        return [
+            replace(task, state=state, message="" if state == "running" else "preparing")
+            for task in tasks
+        ]
+
+
+class UpdatingOrchestrator(FakeOrchestrator):
+    """An old task is still running while the replacement task prepares."""
+
+    def __new__(cls, *args, **kwargs):
+        return object.__new__(cls)
+
+    def __init__(self):
+        super().__init__()
+        self.polls = 0
+
+    def service_tasks(self, service_id):
+        self.polls += 1
+        state = "running" if self.polls >= 5 else "preparing"
+        return [
+            TaskInfo("old", service_id, "node_1", 1, "running", "shutdown"),
+            TaskInfo("new", service_id, "node_1", 1, state, "running"),
+        ]
+
+
+class StartingAfterPullOrchestrator(FakeOrchestrator):
+    """The pull finishes and the container spends time in ``starting``."""
+
+    def __new__(cls, *args, **kwargs):
+        return object.__new__(cls)
+
+    def __init__(self):
+        super().__init__()
+        self.polls = 0
+
+    def service_tasks(self, service_id):
+        tasks = super().service_tasks(service_id)
+        self.polls += 1
+        if self.polls < 8:
+            state = "preparing"
+        elif self.polls < 11:
+            state = "starting"
+        else:
+            state = "running"
+        return [
+            replace(task, state=state, message="" if state == "running" else state)
+            for task in tasks
+        ]
 
 
 class FakeOrchestratorTests(SimpleTestCase):
@@ -61,6 +129,55 @@ class FakeOrchestratorTests(SimpleTestCase):
         self.assertFalse(result.converged)
         self.assertEqual(result.running, 0)
         self.assertIn("0/2", result.message)
+
+    def test_a_slow_pull_extends_the_deadline_and_reports_progress(self):
+        orch = PullingOrchestrator(ready_after=8)
+        service_id = orch.create_service(ServiceSpec(name="app", image="app:1", replicas=2))
+        orch.set_running("app", 0)
+        progress = []
+        result = orch.wait_for_convergence(
+            service_id, timeout=0.1, pull_timeout=5, poll_interval=0.02,
+            progress_interval=0.01, on_progress=progress.append,
+        )
+        self.assertTrue(result.converged)
+        self.assertGreaterEqual(result.elapsed_s, 0.1)
+        self.assertTrue(any("image pull" in item.message.lower() for item in progress))
+        self.assertTrue(any("still in progress after" in item.message for item in progress))
+
+    def test_a_slow_pull_then_start_gets_a_fresh_startup_window(self):
+        orch = StartingAfterPullOrchestrator()
+        service_id = orch.create_service(ServiceSpec(name="app", image="app:1", replicas=2))
+        orch.set_running("app", 0)
+        progress = []
+        result = orch.wait_for_convergence(
+            service_id, timeout=0.1, pull_timeout=5, poll_interval=0.02,
+            progress_interval=0.01, on_progress=progress.append,
+        )
+        self.assertTrue(result.converged)
+        self.assertGreaterEqual(result.elapsed_s, 0.2)
+        self.assertTrue(any("pull finished" in item.message for item in progress))
+
+    def test_the_pull_timeout_still_fails_with_a_clear_message(self):
+        orch = PullingOrchestrator(ready_after=999)
+        service_id = orch.create_service(ServiceSpec(name="app", image="app:1", replicas=2))
+        orch.set_running("app", 0)
+        result = orch.wait_for_convergence(
+            service_id, timeout=0.05, pull_timeout=0.15, poll_interval=0.02,
+        )
+        self.assertFalse(result.converged)
+        self.assertTrue(result.pulling)
+        self.assertIn("image pull still in progress", result.message)
+        self.assertIn("0/2", result.message)
+
+    def test_update_ignores_tasks_that_are_being_shut_down(self):
+        orch = UpdatingOrchestrator()
+        service_id = orch.create_service(ServiceSpec(name="app", image="app:1", replicas=1))
+        result = orch.wait_for_convergence(
+            service_id, timeout=0.1, pull_timeout=1, poll_interval=0.02,
+            progress_interval=0.01,
+        )
+        self.assertTrue(result.converged)
+        self.assertGreaterEqual(result.elapsed_s, 0.08)
 
     def test_global_mode_counts_ready_nodes(self):
         self.orch.add_node("a", role="manager")

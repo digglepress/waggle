@@ -91,6 +91,20 @@ class TaskInfo:
     def is_failed(self) -> bool:
         return self.state in {"failed", "rejected", "orphaned"}
 
+    @property
+    def is_pulling(self) -> bool:
+        """True while Swarm is still fetching the image or scheduling the task.
+
+        Docker does not report pull byte counts for Swarm tasks, so these
+        states are the only progress signal available.
+        """
+        return self.state in PULL_TASK_STATES
+
+
+#: Task states that mean the rollout has not started the container yet.
+#: ``preparing`` is where Swarm pulls the image; the others are scheduling.
+PULL_TASK_STATES = frozenset({"new", "pending", "assigned", "preparing"})
+
 
 @dataclass(frozen=True, slots=True)
 class ConvergenceResult:
@@ -101,6 +115,19 @@ class ConvergenceResult:
     elapsed_s: float
     tasks: tuple[TaskInfo, ...] = ()
     message: str = ""
+    pulling: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class ConvergenceProgress:
+    """A snapshot handed to ``on_progress`` while a rollout is waiting."""
+
+    desired: int
+    running: int
+    failed: int
+    elapsed_s: float
+    pulling: bool
+    message: str
 
 
 @dataclass(frozen=True, slots=True)
