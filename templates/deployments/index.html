@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Projects · {{ app_name }}{% endblock %}
 
 {% block content %}
-<div class="taskk-page">
+<div class="waggle-page">
   <div class="top-breadcrumb-row">
     {% include "deployments/breadcrumb.html" with project=None scope=None %}
   </div>
@@ -147,26 +148,5 @@
   </div>
 </div>
 
-<script>
-  document.querySelectorAll('.view-tab').forEach(function(tab) {
-    tab.addEventListener('click', function() {
-      document.querySelectorAll('.view-tab').forEach(function(t) {
-        t.classList.remove('active');
-        t.setAttribute('aria-selected', 'false');
-      });
-      tab.classList.add('active');
-      tab.setAttribute('aria-selected', 'true');
-      var view = tab.getAttribute('data-view');
-      var cardsView = document.getElementById('view-cards');
-      var listView = document.getElementById('view-list');
-      if (view === 'list') {
-        if (cardsView) cardsView.style.display = 'none';
-        if (listView) listView.style.display = 'block';
-      } else {
-        if (cardsView) cardsView.style.display = 'block';
-        if (listView) listView.style.display = 'none';
-      }
-    });
-  });
-</script>
+<script src="{% static 'js/project-view.js' %}" defer></script>
 {% endblock %}

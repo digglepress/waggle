@@ -48,6 +48,16 @@ All notable changes to Waggle are documented here. The format follows
   a read-only filesystem.
 - `/healthz` no longer returns internal exception text.
 
+### Fixed
+
+- The default CSP blocked the inline theme bootstrap and toggle, the project
+  view switch, and the server-removal confirmation. These are now external
+  scripts, and the external font request was removed.
+- The web UI is branded Waggle again; the theme preference uses a new storage
+  key while still reading the previous one.
+- The deployment page now updates its status badge when the log stream
+  finishes.
+
 ### Security
 
 - Production refuses to start with the development secret, a wildcard

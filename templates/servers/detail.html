@@ -47,7 +47,7 @@
 
     {% if server.is_remote and not is_busy %}
       <form method="post" action="{% url 'servers:action' server.pk %}"
-            onsubmit="return confirm('Remove {{ server.name }} from the swarm? Tasks will be rescheduled.');">
+            data-confirm="Remove {{ server.name }} from the swarm? Tasks will be rescheduled.">
         {% csrf_token %}
         <input type="hidden" name="action" value="remove">
         <button class="btn btn-danger" type="submit">Remove</button>

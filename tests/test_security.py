@@ -22,6 +22,23 @@ class SecurityHeadersTests(TestCase):
         self.assertNotEqual(response["X-Request-ID"], "not valid!")
         self.assertEqual(len(response["X-Request-ID"]), 32)
 
+    def test_pages_do_not_need_inline_scripts(self):
+        import re
+
+        response = self.client.get(reverse("login"))
+        self.assertIn("script-src 'self'", response["Content-Security-Policy"])
+        self.assertNotIn("unsafe-inline", response["Content-Security-Policy"].split("script-src")[1])
+        body = response.content.decode()
+        self.assertIn("js/theme.js", body)
+        self.assertEqual(re.findall(r"<script(?![^>]*\bsrc=)[^>]*>", body), [])
+        self.assertNotIn("fonts.googleapis.com", body)
+
+    def test_branding_uses_the_project_name(self):
+        body = self.client.get(reverse("login")).content.decode()
+        self.assertIn("<title>Sign in · Waggle</title>", body)
+        self.assertIn('<span class="brand-name">Waggle</span>', body)
+        self.assertNotIn("Taskk", body)
+
 
 class ProbeTests(TestCase):
     def test_readiness_reports_the_version(self):

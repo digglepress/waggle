@@ -2,7 +2,7 @@
 {% load static %}
 {% block content %}
 <header class="page-head">
-  <div><h1>{{ job.application.slug }} · {{ job.get_operation_display }} #{{ job.pk }}</h1><p>{{ job.get_state_display }}</p></div>
+  <div><h1>{{ job.application.slug }} · {{ job.get_operation_display }} #{{ job.pk }}</h1><p data-job-state>{{ job.get_state_display }}</p></div>
   <a class="btn" href="{% url 'deployments:detail' job.application_id %}">Application</a>
 </header>
 {% if job.error %}<p class="alert alert-error">{{ job.error }}</p>{% endif %}

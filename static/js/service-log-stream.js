@@ -17,7 +17,10 @@ if (log && window.EventSource) {
   };
   source.addEventListener("done", (event) => {
     source.close();
-    if (status) status.textContent = JSON.parse(event.data);
+    const label = JSON.parse(event.data);
+    if (status) status.textContent = label;
+    const jobState = document.querySelector("[data-job-state]");
+    if (jobState) jobState.textContent = label;
   });
   source.onerror = () => {
     if (status) status.textContent = "Reconnecting…";
