@@ -73,7 +73,7 @@
     </div>
     <div class="stat">
       <span class="stat-label">SERVICES ACTIVE</span>
-      <span class="stat-value">{{ cluster.services|length }}</span>
+      <span class="stat-value">{{ active_services|length }}</span>
     </div>
     {% if server_attention %}
       <div class="stat">
@@ -129,7 +129,7 @@
           <div><dt>Cluster ID</dt><dd class="mono">{{ cluster.swarm.cluster_id|default:"—" }}</dd></div>
           <div><dt>This node</dt><dd class="mono">{{ cluster.swarm.hostname|default:"—" }}</dd></div>
           <div><dt>Manager available</dt><dd>{{ cluster.swarm.control_available|yesno:"Yes,No" }}</dd></div>
-          <div><dt>Active services</dt><dd>{{ cluster.services|length }} running</dd></div>
+          <div><dt>Active services</dt><dd>{{ active_services|length }} running</dd></div>
         </dl>
       </section>
     {% endif %}

@@ -68,6 +68,23 @@ class AuthAndPageTests(WaggleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Dashboard")
 
+    def test_dashboard_counts_only_running_services(self):
+        from apps.core.orchestration import ClusterStatus
+        from orchestrator.types import ServiceInfo
+
+        services = [
+            ServiceInfo("1", "one", "img", "replicated", 2, 2),
+            ServiceInfo("2", "two", "img", "replicated", 1, 0),
+        ]
+        cluster = ClusterStatus(ok=True, services=services)
+        with mock.patch("apps.core.views.cluster_status", return_value=cluster):
+            response = self.client.get(reverse("core:dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertRegex(
+            response.content.decode(),
+            r"SERVICES ACTIVE</span>\s*<span class=\"stat-value\">1</span>",
+        )
+
     def test_cluster_page_renders_without_a_swarm(self):
         response = self.client.get(reverse("core:cluster"))
         self.assertEqual(response.status_code, 200)

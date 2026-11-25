@@ -57,6 +57,8 @@ All notable changes to Waggle are documented here. The format follows
   key while still reading the previous one.
 - The deployment page now updates its status badge when the log stream
   finishes.
+- The dashboard counts running managed services instead of always showing
+  zero.
 
 ### Security
 

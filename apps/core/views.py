@@ -31,10 +31,13 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        cluster = cluster_status()
+        cluster = cluster_status(include_services=True)
         servers = Server.objects.all()
         context.update(
             cluster=cluster,
+            active_services=[
+                service for service in cluster.services if service.replicas_running > 0
+            ],
             servers=servers[:8],
             server_total=servers.count(),
             server_ready=servers.filter(status=Server.Status.READY).count(),
